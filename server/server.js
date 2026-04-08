@@ -8,17 +8,22 @@ import bookingRoutes from './routes/bookings.js';
 
 dotenv.config();
 
+// Support comma-separated origins: e.g. "https://app.vercel.app,http://localhost:5173"
+const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
+  .split(',')
+  .map((o) => o.trim());
+
 const app = express();
 const httpServer = createServer(app);
 
 export const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CLIENT_URL,
+    origin: allowedOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
   },
 });
 
-app.use(cors({ origin: process.env.CLIENT_URL }));
+app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 
 // Attach socket.io instance to every request so routes can emit events

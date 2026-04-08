@@ -169,5 +169,54 @@ Defined in `client/src/utils/tourTypeHelpers.js` → `ROOM_UNITS` array.
 Also validated in `server/models/Booking.js` → `roomUnit.enum`.
 **Update both files** when changing room names.
 
+## Deployment
+
+### Stack
+| Service | Platform | Notes |
+|---------|----------|-------|
+| Database | MongoDB Atlas (free M0) | Cloud MongoDB |
+| Backend | Render (free tier) | Node + Express + Socket.io |
+| Frontend | Vercel (free) | React/Vite |
+
+### Step 1 — MongoDB Atlas
+1. Go to https://cloud.mongodb.com → Create free M0 cluster
+2. Create a database user (username + password)
+3. Network Access → Add IP → `0.0.0.0/0` (allow all)
+4. Connect → Drivers → copy the connection string
+5. Replace `<password>` with your DB user password, add `/resort-scheduler` before `?`
+
+### Step 2 — Deploy Backend on Render
+1. Go to https://render.com → New → Web Service
+2. Connect your GitHub repo: `adriananicete/resort-calendar-scheduler`
+3. Settings:
+   - **Root Directory:** `server`
+   - **Build Command:** `npm install`
+   - **Start Command:** `node server.js`
+   - **Runtime:** Node
+4. Environment Variables (add these):
+   - `MONGODB_URI` → your Atlas connection string
+   - `CLIENT_URL` → your Vercel URL (add after Step 3, or use `*` temporarily)
+   - `NODE_ENV` → `production`
+5. Deploy → copy the Render URL (e.g. `https://resort-scheduler-api.onrender.com`)
+
+> ⚠️ Free tier sleeps after 15 min inactivity — first request takes ~30s to wake up
+
+### Step 3 — Deploy Frontend on Vercel
+1. Go to https://vercel.com → New Project
+2. Import GitHub repo: `adriananicete/resort-calendar-scheduler`
+3. Settings:
+   - **Root Directory:** `client`
+   - **Framework:** Vite (auto-detected)
+4. Environment Variables (add these):
+   - `VITE_API_URL` → `https://your-render-url.onrender.com/api`
+   - `VITE_SOCKET_URL` → `https://your-render-url.onrender.com`
+5. Deploy → copy the Vercel URL (e.g. `https://resort-scheduler.vercel.app`)
+
+### Step 4 — Update Render CORS
+Go back to Render → Environment → update `CLIENT_URL` to your Vercel URL → redeploy.
+
+### Env Var Reference
+See `server/.env.example` and `client/.env.example` for the full list.
+
 ## GitHub
 https://github.com/adriananicete/resort-calendar-scheduler

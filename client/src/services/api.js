@@ -1,7 +1,9 @@
 import axios from 'axios';
 
+// Dev: Vite proxy handles /api → localhost:5000
+// Prod: set VITE_API_URL=https://your-render-url.onrender.com/api in Vercel env vars
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   timeout: 8000,
 });
 
