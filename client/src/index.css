@@ -24,9 +24,76 @@
   border-color: #6366F1 !important;
 }
 
-/* Give month cells breathing room */
+/* Box-like month cells — equal height rows */
 .rbc-month-row {
-  min-height: 90px;
+  min-height: 110px;
+}
+
+/* Date number styling — larger, top-right aligned */
+.rbc-date-cell {
+  padding: 4px 8px;
+  text-align: right;
+}
+
+.rbc-date-cell > a,
+.rbc-date-cell > button {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+/* Today's date highlight */
+.rbc-today .rbc-date-cell > a,
+.rbc-today .rbc-date-cell > button {
+  background-color: #6366F1;
+  color: #fff;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Cell borders — cleaner box look */
+.rbc-month-view {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.rbc-header {
+  background-color: #f8fafc;
+  padding: 8px 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.rbc-day-bg + .rbc-day-bg {
+  border-left: 1px solid #f1f5f9;
+}
+
+.rbc-month-row + .rbc-month-row {
+  border-top: 1px solid #f1f5f9;
+}
+
+.rbc-off-range-bg {
+  background-color: #fafafa;
+}
+
+.rbc-off-range .rbc-date-cell > a {
+  color: #d1d5db;
+}
+
+/* Week/Day view time gutter */
+.rbc-time-view {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 /* Ensure date picker popups float above everything */

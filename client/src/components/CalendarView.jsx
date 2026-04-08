@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale/en-US';
@@ -29,17 +29,34 @@ function toCalendarEvents(bookings) {
   }));
 }
 
-export default function CalendarView({ bookings, onSelectEvent, onSelectSlot }) {
+export default function CalendarView({ bookings, onSelectSlot, formHeight }) {
   const events = useMemo(() => toCalendarEvents(bookings), [bookings]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentView, setCurrentView] = useState('month');
 
+  // Measure header height so we can subtract it from the total
+  const headerRef = useRef(null);
+  const [headerHeight, setHeaderHeight] = useState(90);
+
+  useEffect(() => {
+    if (headerRef.current) {
+      setHeaderHeight(headerRef.current.offsetHeight);
+    }
+  }, []);
+
+  // Calendar height = form height minus header minus padding (32px top+bottom)
+  const calHeight = formHeight
+    ? Math.max(formHeight - headerHeight - 32, 400)
+    : 580;
+
   return (
     <div className="bg-white rounded-2xl shadow-md flex flex-col">
       {/* Header */}
-      <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-5 py-4 rounded-t-2xl">
+      <div
+        ref={headerRef}
+        className="bg-gradient-to-r from-slate-700 to-slate-800 px-5 py-4 rounded-t-2xl"
+      >
         <h2 className="text-white font-bold text-lg">📆 Booking Calendar</h2>
-        {/* Color Legend */}
         <div className="flex flex-wrap gap-3 mt-2">
           {Object.entries(TOUR_LABELS).map(([key, label]) => (
             <div key={key} className="flex items-center gap-1.5">
@@ -63,9 +80,9 @@ export default function CalendarView({ bookings, onSelectEvent, onSelectSlot }) 
           onNavigate={(date) => setCurrentDate(date)}
           onView={(view) => setCurrentView(view)}
           views={['month', 'week', 'day']}
-          style={{ height: 620 }}
+          style={{ height: calHeight }}
           selectable
-          onSelectEvent={(event) => onSelectEvent(event.resource)}
+          onSelectEvent={() => {}}
           onSelectSlot={(slotInfo) => onSelectSlot(slotInfo.start)}
           eventPropGetter={(event) => getEventStyle(event.resource?.tourType)}
           popup

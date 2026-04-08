@@ -1,27 +1,31 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import BookingForm from './components/BookingForm';
 import CalendarView from './components/CalendarView';
-import BookingModal from './components/BookingModal';
 import { useBookings } from './hooks/useBookings';
 
 export default function App() {
   const { bookings, loading } = useBookings();
-  const [selectedBooking, setSelectedBooking] = useState(null); // for modal
-  const [editingBooking, setEditingBooking]   = useState(null); // for form edit mode
-  const [initialDate, setInitialDate]         = useState(null); // from calendar slot click
+  const [editingBooking, setEditingBooking] = useState(null);
+  const [initialDate, setInitialDate]       = useState(null);
+
+  // Measure form height so calendar can match it
+  const formRef = useRef(null);
+  const [formHeight, setFormHeight] = useState(null);
+
+  useEffect(() => {
+    const el = formRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      setFormHeight(entry.contentRect.height);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   function handleCalendarSlotClick(date) {
     setEditingBooking(null);
     setInitialDate(date);
-    // Scroll to form on mobile
-    document.getElementById('booking-form-panel')?.scrollIntoView({ behavior: 'smooth' });
-  }
-
-  function handleEditBooking(booking) {
-    setSelectedBooking(null);
-    setEditingBooking(booking);
-    setInitialDate(null);
     document.getElementById('booking-form-panel')?.scrollIntoView({ behavior: 'smooth' });
   }
 
@@ -64,6 +68,7 @@ export default function App() {
       <main className="max-w-screen-2xl mx-auto px-4 py-5 flex flex-col lg:flex-row gap-5 lg:items-start">
         {/* Left Panel — Booking Form */}
         <div
+          ref={formRef}
           id="booking-form-panel"
           className="w-full lg:w-2/5 xl:w-[38%] flex-shrink-0 lg:sticky lg:top-5"
         >
@@ -77,7 +82,7 @@ export default function App() {
         {/* Right Panel — Calendar */}
         <div className="w-full lg:flex-1">
           {loading ? (
-            <div className="bg-white rounded-2xl shadow-md h-full flex items-center justify-center min-h-[400px]">
+            <div className="bg-white rounded-2xl shadow-md flex items-center justify-center" style={{ height: formHeight || 400 }}>
               <div className="text-center">
                 <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
                 <p className="text-gray-400 text-sm mt-3">Loading calendar...</p>
@@ -86,21 +91,12 @@ export default function App() {
           ) : (
             <CalendarView
               bookings={bookings}
-              onSelectEvent={(booking) => setSelectedBooking(booking)}
               onSelectSlot={handleCalendarSlotClick}
+              formHeight={formHeight}
             />
           )}
         </div>
       </main>
-
-      {/* Booking Detail Modal */}
-      {selectedBooking && (
-        <BookingModal
-          booking={selectedBooking}
-          onClose={() => setSelectedBooking(null)}
-          onEdit={handleEditBooking}
-        />
-      )}
     </div>
   );
 }
