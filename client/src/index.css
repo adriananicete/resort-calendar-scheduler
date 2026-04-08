@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* react-big-calendar: use project font */
+.rbc-calendar {
+  font-family: inherit;
+}
+
+/* Give month cells breathing room */
+.rbc-month-row {
+  min-height: 90px;
+}
+
+/* Ensure date picker popups float above everything */
+.react-datepicker-popper {
+  z-index: 9999 !important;
+}
+
+/* Custom scrollbar for the form panel */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
