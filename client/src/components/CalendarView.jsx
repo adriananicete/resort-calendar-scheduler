@@ -8,15 +8,21 @@ import { TOUR_COLORS, TOUR_LABELS, getEventStyle } from '../utils/tourTypeHelper
 const localizer = dateFnsLocalizer({
   format,
   parse,
-  startOfWeek: () => startOfWeek(new Date(), { weekStartsOn: 0 }),
+  startOfWeek: (date) => startOfWeek(date, { weekStartsOn: 0 }),
   getDay,
   locales: { 'en-US': enUS },
 });
 
+const TOUR_TYPE_DISPLAY = {
+  day:       'Day Tour',
+  night:     'Night Tour',
+  overnight: 'Overnight',
+};
+
 function toCalendarEvents(bookings) {
   return bookings.map((b) => ({
     id:       b._id,
-    title:    `${b.roomUnit} — ${b.guestName}`,
+    title:    TOUR_TYPE_DISPLAY[b.tourType] || b.tourType,
     start:    new Date(b.checkIn),
     end:      new Date(b.checkOut),
     resource: b,
@@ -58,9 +64,7 @@ export default function CalendarView({ bookings, onSelectEvent, onSelectSlot }) 
           onSelectSlot={(slotInfo) => onSelectSlot(slotInfo.start)}
           eventPropGetter={(event) => getEventStyle(event.resource?.tourType)}
           popup
-          tooltipAccessor={(event) =>
-            `${event.resource?.roomUnit} — ${event.resource?.guestName}\n${TOUR_LABELS[event.resource?.tourType]}`
-          }
+          tooltipAccessor={(event) => TOUR_TYPE_DISPLAY[event.resource?.tourType] || ''}
           formats={{
             eventTimeRangeFormat: () => '',
           }}
