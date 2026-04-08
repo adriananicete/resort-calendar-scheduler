@@ -75,7 +75,7 @@ export default function App() {
         </div>
 
         {/* Right Panel — Calendar */}
-        <div className="w-full lg:flex-1 min-h-[520px] lg:min-h-[680px]">
+        <div className="w-full lg:flex-1">
           {loading ? (
             <div className="bg-white rounded-2xl shadow-md h-full flex items-center justify-center min-h-[400px]">
               <div className="text-center">

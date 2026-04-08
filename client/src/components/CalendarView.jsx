@@ -33,9 +33,9 @@ export default function CalendarView({ bookings, onSelectEvent, onSelectSlot }) 
   const events = useMemo(() => toCalendarEvents(bookings), [bookings]);
 
   return (
-    <div className="bg-white rounded-2xl shadow-md overflow-hidden flex flex-col h-full">
+    <div className="bg-white rounded-2xl shadow-md flex flex-col">
       {/* Header */}
-      <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-5 py-4">
+      <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-5 py-4 rounded-t-2xl">
         <h2 className="text-white font-bold text-lg">📆 Booking Calendar</h2>
         {/* Color Legend */}
         <div className="flex flex-wrap gap-3 mt-2">
@@ -52,13 +52,13 @@ export default function CalendarView({ bookings, onSelectEvent, onSelectSlot }) 
       </div>
 
       {/* Calendar */}
-      <div className="flex-1 p-4 min-h-0">
+      <div className="p-4">
         <Calendar
           localizer={localizer}
           events={events}
           defaultView="month"
           views={['month', 'week', 'day']}
-          style={{ height: '100%' }}
+          style={{ height: 620 }}
           selectable
           onSelectEvent={(event) => onSelectEvent(event.resource)}
           onSelectSlot={(slotInfo) => onSelectSlot(slotInfo.start)}

@@ -7,6 +7,23 @@
   font-family: inherit;
 }
 
+/* Ensure toolbar buttons are always clickable (Tailwind preflight fix) */
+.rbc-toolbar button {
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  display: inline-block !important;
+}
+
+.rbc-toolbar button:hover {
+  background-color: #e2e8f0;
+}
+
+.rbc-toolbar button.rbc-active {
+  background-color: #6366F1 !important;
+  color: #fff !important;
+  border-color: #6366F1 !important;
+}
+
 /* Give month cells breathing room */
 .rbc-month-row {
   min-height: 90px;
