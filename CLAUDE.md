@@ -236,5 +236,20 @@ Go back to Render → Environment → update `CLIENT_URL` to your Vercel URL →
 ### Env Var Reference
 See `server/.env.example` and `client/.env.example` for the full list.
 
+## Live URLs (Production)
+
+| Service | URL |
+|---------|-----|
+| Frontend (Vercel) | https://resort-calendar-scheduler.vercel.app |
+| Backend (Render) | https://resort-calendar-scheduler.onrender.com |
+| Health check | https://resort-calendar-scheduler.onrender.com/api/health |
+
+### Important Production Notes
+- **Render free tier** sleeps after 15 min inactivity — first request on a cold start takes ~30s
+- **Vercel auto-deploy** triggers on every push to `main` — GitHub repo must stay **public** for this to work (Hobby plan limitation)
+- **MongoDB URI** must include the database name: `.../resort-scheduler?appName=...` — without it, Mongoose connects but uses a default db
+- **Vercel env vars** require a manual redeploy to take effect after changes — go to Deployments → latest → `...` → Redeploy
+- **CORS** is set via `CLIENT_URL` on Render — must match the exact Vercel URL (no trailing slash)
+
 ## GitHub
 https://github.com/adriananicete/resort-calendar-scheduler
