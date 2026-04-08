@@ -22,7 +22,7 @@ const TOUR_TYPE_DISPLAY = {
 function toCalendarEvents(bookings) {
   return bookings.map((b) => ({
     id:       b._id,
-    title:    TOUR_TYPE_DISPLAY[b.tourType] || b.tourType,
+    title:    `${TOUR_TYPE_DISPLAY[b.tourType] || b.tourType}: ${b.roomUnit}`,
     start:    new Date(b.checkIn),
     end:      new Date(b.checkOut),
     resource: b,
