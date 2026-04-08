@@ -1,121 +1,106 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState } from 'react';
+import { Toaster } from 'react-hot-toast';
+import BookingForm from './components/BookingForm';
+import CalendarView from './components/CalendarView';
+import BookingModal from './components/BookingModal';
+import { useBookings } from './hooks/useBookings';
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const { bookings, loading } = useBookings();
+  const [selectedBooking, setSelectedBooking] = useState(null); // for modal
+  const [editingBooking, setEditingBooking]   = useState(null); // for form edit mode
+  const [initialDate, setInitialDate]         = useState(null); // from calendar slot click
+
+  function handleCalendarSlotClick(date) {
+    setEditingBooking(null);
+    setInitialDate(date);
+    // Scroll to form on mobile
+    document.getElementById('booking-form-panel')?.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function handleEditBooking(booking) {
+    setSelectedBooking(null);
+    setEditingBooking(booking);
+    setInitialDate(null);
+    document.getElementById('booking-form-panel')?.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function handleEditDone() {
+    setEditingBooking(null);
+    setInitialDate(null);
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 to-indigo-50">
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: { fontSize: '14px', borderRadius: '10px' },
+          success: { iconTheme: { primary: '#6366F1', secondary: '#fff' } },
+        }}
+      />
+
+      {/* Top Header */}
+      <header className="bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-screen-2xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-lg font-bold shadow">
+              🌴
+            </div>
+            <div>
+              <h1 className="text-gray-900 font-bold text-lg leading-tight">Resort Booking Scheduler</h1>
+              <p className="text-gray-400 text-xs">Manage reservations in real-time</p>
+            </div>
+          </div>
+          <div className="hidden sm:flex items-center gap-2 text-xs text-gray-500">
+            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            <span>Live sync active</span>
+          </div>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-screen-2xl mx-auto px-4 py-5 flex flex-col lg:flex-row gap-5 lg:items-start">
+        {/* Left Panel — Booking Form */}
+        <div
+          id="booking-form-panel"
+          className="w-full lg:w-2/5 xl:w-[38%] flex-shrink-0 lg:sticky lg:top-5"
         >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+          <BookingForm
+            editingBooking={editingBooking}
+            onEditDone={handleEditDone}
+            initialDate={initialDate}
+          />
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        {/* Right Panel — Calendar */}
+        <div className="w-full lg:flex-1 min-h-[520px] lg:min-h-[680px]">
+          {loading ? (
+            <div className="bg-white rounded-2xl shadow-md h-full flex items-center justify-center min-h-[400px]">
+              <div className="text-center">
+                <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                <p className="text-gray-400 text-sm mt-3">Loading calendar...</p>
+              </div>
+            </div>
+          ) : (
+            <CalendarView
+              bookings={bookings}
+              onSelectEvent={(booking) => setSelectedBooking(booking)}
+              onSelectSlot={handleCalendarSlotClick}
+            />
+          )}
+        </div>
+      </main>
+
+      {/* Booking Detail Modal */}
+      {selectedBooking && (
+        <BookingModal
+          booking={selectedBooking}
+          onClose={() => setSelectedBooking(null)}
+          onEdit={handleEditBooking}
+        />
+      )}
+    </div>
+  );
 }
-
-export default App
