@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale/en-US';
@@ -31,6 +31,8 @@ function toCalendarEvents(bookings) {
 
 export default function CalendarView({ bookings, onSelectEvent, onSelectSlot }) {
   const events = useMemo(() => toCalendarEvents(bookings), [bookings]);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentView, setCurrentView] = useState('month');
 
   return (
     <div className="bg-white rounded-2xl shadow-md flex flex-col">
@@ -56,7 +58,10 @@ export default function CalendarView({ bookings, onSelectEvent, onSelectSlot }) 
         <Calendar
           localizer={localizer}
           events={events}
-          defaultView="month"
+          date={currentDate}
+          view={currentView}
+          onNavigate={(date) => setCurrentDate(date)}
+          onView={(view) => setCurrentView(view)}
           views={['month', 'week', 'day']}
           style={{ height: 620 }}
           selectable
