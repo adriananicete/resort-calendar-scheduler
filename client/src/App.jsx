@@ -76,6 +76,7 @@ export default function App() {
             editingBooking={editingBooking}
             onEditDone={handleEditDone}
             initialDate={initialDate}
+            bookings={bookings}
           />
         </div>
 

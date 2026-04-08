@@ -101,6 +101,18 @@
   z-index: 9999 !important;
 }
 
+/* Strikethrough for already-booked dates in the date picker */
+.react-datepicker__day.date-already-booked {
+  text-decoration: line-through;
+  color: #ef4444 !important;
+  opacity: 0.7;
+  font-weight: 600;
+}
+.react-datepicker__day.date-already-booked:hover {
+  background-color: #fee2e2;
+  border-radius: 50%;
+}
+
 /* Custom scrollbar for the form panel */
 ::-webkit-scrollbar {
   width: 6px;
