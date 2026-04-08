@@ -259,14 +259,7 @@ export default function BookingForm({ editingBooking, onEditDone, initialDate, b
           {/* Dates */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>
-                Check-in Date *
-                {bookedDates.length > 0 && (
-                  <span className="ml-1 text-red-400 normal-case font-normal">
-                    (<span className="line-through">date</span> = booked)
-                  </span>
-                )}
-              </label>
+              <label className={labelCls}>Check-in Date *</label>
               <DatePicker
                 selected={form.checkIn}
                 onChange={(date) => setForm((prev) => ({ ...prev, checkIn: date }))}
