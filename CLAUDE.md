@@ -25,9 +25,10 @@ Calendar-Scheduler/
     └── src/
         ├── App.jsx           ← main layout: form (40%) | calendar (60%)
         ├── components/
-        │   ├── BookingForm.jsx   ← booking form with auto checkout calc
-        │   ├── CalendarView.jsx  ← react-big-calendar month/week/day view (controlled)
-        │   └── BookingModal.jsx  ← exists but NOT used (disabled for client privacy)
+        │   ├── BookingForm.jsx        ← booking form with auto checkout, strikethrough dates, confirm modal
+        │   ├── BookingConfirmModal.jsx ← review modal before final submit
+        │   ├── CalendarView.jsx       ← react-big-calendar month/week/day view (controlled)
+        │   └── BookingModal.jsx       ← exists but NOT used (disabled for client privacy)
         ├── hooks/
         │   ├── useBookings.js        ← fetch all + socket event listeners
         │   └── useConflictCheck.js   ← debounced live conflict check
@@ -115,7 +116,7 @@ Logic is in `client/src/utils/tourTypeHelpers.js` → `calculateCheckOut()`.
 | Overnight | Purple | `#8B5CF6` |
 
 ### Event Display (Privacy)
-- Calendar events show **tour type label only** (`Day Tour`, `Night Tour`, `Overnight`)
+- Calendar events show **tour type + room** (e.g. `Day Tour: Kubo A`)
 - Clicking a booked event does **nothing** — guest details are intentionally hidden from public view
 - `BookingModal.jsx` exists but is not wired up (kept for potential future admin use)
 
@@ -141,6 +142,23 @@ MongoDB overlap query in `server/utils/conflictCheck.js`:
 - PUT: pass `excludeId` to avoid self-conflict
 
 Frontend checks live via `useConflictCheck` hook (debounced 500ms). Submit is blocked if conflict is detected.
+
+**Privacy rule:** Conflict warning must never show the name of the existing guest — only show the room name and that it is unavailable. This is enforced in `BookingForm.jsx` conflict warning section.
+
+## Booking Form Flow
+
+1. Client fills out form
+2. Clicks **"Review Booking"** → triggers form validation
+3. If valid → `BookingConfirmModal` opens showing all details
+4. Client reviews → clicks **"Confirm & Book ✓"** → actual API call (POST/PUT)
+5. On success → toast + form resets; On error → toast + modal closes
+
+**Strikethrough dates in date picker:**
+- When a `tourType` is selected: dates with existing bookings of that tour type show as red strikethrough
+- If `roomUnit` is also selected: filtered further to only that room's bookings
+- Uses `dayClassName` prop on `react-datepicker` with class `date-already-booked`
+- CSS for `.date-already-booked` is in `client/src/index.css`
+- Logic computed via `useMemo` in `BookingForm.jsx` using `isSameDay` from date-fns
 
 ## Real-time Socket Flow
 
