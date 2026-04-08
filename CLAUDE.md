@@ -26,8 +26,8 @@ Calendar-Scheduler/
         ├── App.jsx           ← main layout: form (40%) | calendar (60%)
         ├── components/
         │   ├── BookingForm.jsx   ← booking form with auto checkout calc
-        │   ├── CalendarView.jsx  ← react-big-calendar month/week/day view
-        │   └── BookingModal.jsx  ← view / edit / delete modal
+        │   ├── CalendarView.jsx  ← react-big-calendar month/week/day view (controlled)
+        │   └── BookingModal.jsx  ← exists but NOT used (disabled for client privacy)
         ├── hooks/
         │   ├── useBookings.js        ← fetch all + socket event listeners
         │   └── useConflictCheck.js   ← debounced live conflict check
@@ -105,13 +105,31 @@ CLIENT_URL=http://localhost:5173
 
 Logic is in `client/src/utils/tourTypeHelpers.js` → `calculateCheckOut()`.
 
-## Calendar Color Coding
+## Calendar Behavior & Design
 
+### Color Coding
 | Tour Type | Color | Hex |
 |-----------|-------|-----|
 | Day Tour | Amber | `#F59E0B` |
 | Night Tour | Indigo | `#6366F1` |
 | Overnight | Purple | `#8B5CF6` |
+
+### Event Display (Privacy)
+- Calendar events show **tour type label only** (`Day Tour`, `Night Tour`, `Overnight`)
+- Clicking a booked event does **nothing** — guest details are intentionally hidden from public view
+- `BookingModal.jsx` exists but is not wired up (kept for potential future admin use)
+
+### Controlled Calendar State
+`CalendarView.jsx` uses controlled `date` and `view` state with `onNavigate` and `onView` callbacks. Do **not** switch back to `defaultView` — it breaks navigation.
+```jsx
+const [currentDate, setCurrentDate] = useState(new Date());
+const [currentView, setCurrentView] = useState('month');
+<Calendar date={currentDate} view={currentView}
+  onNavigate={setCurrentDate} onView={setCurrentView} />
+```
+
+### Height Matching
+`App.jsx` uses a `ResizeObserver` on the form panel ref to measure its height, then passes `formHeight` as a prop to `CalendarView`. The calendar computes: `calHeight = formHeight - headerHeight - 32px padding`. Do not use `height: '100%'` on the Calendar component — use a fixed pixel value only.
 
 ## Double Booking Logic
 
