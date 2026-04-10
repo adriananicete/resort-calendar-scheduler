@@ -84,6 +84,8 @@ export default function CalendarView({ bookings, onSelectSlot, formHeight }) {
           selectable
           onSelectEvent={() => {}}
           onSelectSlot={(slotInfo) => onSelectSlot(slotInfo.start)}
+          drilldownView={null}
+          onDrillDown={(date) => onSelectSlot(date)}
           eventPropGetter={(event) => getEventStyle(event.resource?.tourType)}
           popup
           tooltipAccessor={(event) => TOUR_TYPE_DISPLAY[event.resource?.tourType] || ''}

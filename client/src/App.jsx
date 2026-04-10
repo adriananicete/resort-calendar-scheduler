@@ -4,12 +4,17 @@ import BookingForm from './components/BookingForm';
 import CalendarView from './components/CalendarView';
 import { useBookings } from './hooks/useBookings';
 
+const MOBILE_QUERY = '(max-width: 1023px)';
+const isMobileViewport = () =>
+  typeof window !== 'undefined' && window.matchMedia(MOBILE_QUERY).matches;
+
 export default function App() {
   const { bookings, loading } = useBookings();
   const [editingBooking, setEditingBooking] = useState(null);
   const [initialDate, setInitialDate]       = useState(null);
+  const [isMobileFormOpen, setIsMobileFormOpen] = useState(false);
 
-  // Measure form height so calendar can match it
+  // Measure form height so calendar can match it (desktop only)
   const formRef = useRef(null);
   const [formHeight, setFormHeight] = useState(null);
 
@@ -17,21 +22,35 @@ export default function App() {
     const el = formRef.current;
     if (!el) return;
     const ro = new ResizeObserver(([entry]) => {
-      setFormHeight(entry.contentRect.height);
+      // Only meaningful on desktop where form sits beside calendar
+      if (!isMobileViewport()) setFormHeight(entry.contentRect.height);
     });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
 
+  // Lock body scroll while mobile form modal is open
+  useEffect(() => {
+    if (!isMobileFormOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [isMobileFormOpen]);
+
   function handleCalendarSlotClick(date) {
     setEditingBooking(null);
     setInitialDate(date);
-    document.getElementById('booking-form-panel')?.scrollIntoView({ behavior: 'smooth' });
+    if (isMobileViewport()) {
+      setIsMobileFormOpen(true);
+    } else {
+      document.getElementById('booking-form-panel')?.scrollIntoView({ behavior: 'smooth' });
+    }
   }
 
   function handleEditDone() {
     setEditingBooking(null);
     setInitialDate(null);
+    setIsMobileFormOpen(false);
   }
 
   return (
@@ -66,18 +85,40 @@ export default function App() {
 
       {/* Main Content */}
       <main className="max-w-screen-2xl mx-auto px-4 py-5 flex flex-col lg:flex-row gap-5 lg:items-start">
-        {/* Left Panel — Booking Form */}
+        {/* Left Panel — Booking Form (inline on desktop, modal on mobile) */}
         <div
-          ref={formRef}
           id="booking-form-panel"
-          className="w-full lg:w-2/5 xl:w-[38%] flex-shrink-0 lg:sticky lg:top-5"
+          onClick={() => isMobileFormOpen && setIsMobileFormOpen(false)}
+          className={`
+            ${isMobileFormOpen
+              ? 'fixed inset-0 z-[60] flex items-start justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto'
+              : 'hidden'}
+            lg:block lg:static lg:inset-auto lg:z-auto lg:bg-transparent lg:backdrop-blur-none lg:p-0 lg:overflow-visible
+            lg:w-2/5 xl:w-[38%] lg:flex-shrink-0 lg:sticky lg:top-5
+          `}
         >
-          <BookingForm
-            editingBooking={editingBooking}
-            onEditDone={handleEditDone}
-            initialDate={initialDate}
-            bookings={bookings}
-          />
+          <div
+            ref={formRef}
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-md mx-auto lg:max-w-none lg:mx-0"
+          >
+            {isMobileFormOpen && (
+              <button
+                type="button"
+                onClick={() => setIsMobileFormOpen(false)}
+                aria-label="Close form"
+                className="lg:hidden absolute -top-3 -right-3 z-10 w-9 h-9 rounded-full bg-white shadow-lg flex items-center justify-center text-gray-700 text-xl font-bold hover:bg-gray-50"
+              >
+                ×
+              </button>
+            )}
+            <BookingForm
+              editingBooking={editingBooking}
+              onEditDone={handleEditDone}
+              initialDate={initialDate}
+              bookings={bookings}
+            />
+          </div>
         </div>
 
         {/* Right Panel — Calendar */}

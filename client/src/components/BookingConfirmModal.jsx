@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { TOUR_LABELS, TOUR_COLORS, formatDateTime } from '../utils/tourTypeHelpers';
 
 export default function BookingConfirmModal({ booking, checkOut, onConfirm, onCancel, submitting }) {
@@ -12,8 +13,8 @@ export default function BookingConfirmModal({ booking, checkOut, onConfirm, onCa
     </div>
   );
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
         {/* Header */}
         <div className="px-5 py-4" style={{ backgroundColor: tourColor }}>
@@ -57,6 +58,7 @@ export default function BookingConfirmModal({ booking, checkOut, onConfirm, onCa
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

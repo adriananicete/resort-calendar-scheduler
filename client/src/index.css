@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+html,
+body {
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv11', 'ss01', 'ss03';
+}
+
 /* react-big-calendar: use project font */
 .rbc-calendar {
   font-family: inherit;
@@ -111,6 +119,51 @@
 .react-datepicker__day.date-already-booked:hover {
   background-color: #fee2e2;
   border-radius: 50%;
+}
+
+/* ===== Mobile overrides (<1024px) ===== */
+@media (max-width: 1023px) {
+  /* Center date numbers inside each day cell */
+  .rbc-date-cell {
+    text-align: center;
+    padding: 4px 0;
+  }
+  .rbc-date-cell > a,
+  .rbc-date-cell > button {
+    display: inline-block;
+  }
+
+  /* Tighter month rows on small screens */
+  .rbc-month-row {
+    min-height: 70px;
+  }
+
+  /* Turn event bars into slim colored pills — hide all text */
+  .rbc-event {
+    height: 6px !important;
+    min-height: 6px !important;
+    border-radius: 9999px !important;
+    padding: 0 !important;
+    margin: 2px 6px !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    border: none !important;
+  }
+  .rbc-event-content,
+  .rbc-event-label {
+    display: none !important;
+  }
+
+  /* Show-more link still needs to be readable */
+  .rbc-show-more {
+    font-size: 0.65rem !important;
+    padding: 1px 2px !important;
+  }
+
+  /* Toolbar compact */
+  .rbc-toolbar {
+    font-size: 0.8rem;
+  }
 }
 
 /* Custom scrollbar for the form panel */

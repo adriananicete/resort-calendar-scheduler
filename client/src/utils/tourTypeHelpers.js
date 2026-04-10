@@ -13,13 +13,21 @@ export const TOUR_LABELS = {
 };
 
 export const ROOM_UNITS = [
-  'Kubo A',
-  'Kubo B',
-  'Kubo C',
-  'Kubo D',
-  'Villa 1',
-  'Villa 2',
+  { name: 'Kubo A',  price: 10000 },
+  { name: 'Kubo B',  price: 11000 },
+  { name: 'Kubo C',  price: 12000 },
+  { name: 'Kubo D',  price: 13000 },
+  { name: 'Villa 1', price: 18000 },
+  { name: 'Villa 2', price: 22000 },
 ];
+
+export function getRoomPrice(name) {
+  return ROOM_UNITS.find((r) => r.name === name)?.price ?? 0;
+}
+
+export function formatPeso(value) {
+  return `₱${Number(value || 0).toLocaleString('en-PH')}`;
+}
 
 /**
  * Calculate checkout date/time based on check-in date and tour type.

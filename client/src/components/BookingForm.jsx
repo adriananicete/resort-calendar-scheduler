@@ -8,6 +8,8 @@ import {
   TOUR_LABELS,
   calculateCheckOut,
   formatDateTime,
+  getRoomPrice,
+  formatPeso,
 } from '../utils/tourTypeHelpers';
 import { createBooking, updateBooking } from '../services/api';
 import { useConflictCheck } from '../hooks/useConflictCheck';
@@ -65,6 +67,17 @@ export default function BookingForm({ editingBooking, onEditDone, initialDate, b
       setCheckOut(null);
     }
   }, [form.checkIn, form.tourType]);
+
+  // Auto-fill amount based on selected room + payment type
+  useEffect(() => {
+    if (!form.roomUnit) {
+      setForm((prev) => (prev.amount === '' ? prev : { ...prev, amount: '' }));
+      return;
+    }
+    const price = getRoomPrice(form.roomUnit);
+    const computed = form.paymentType === 'full' ? price : price * 0.5;
+    setForm((prev) => (prev.amount === computed ? prev : { ...prev, amount: computed }));
+  }, [form.roomUnit, form.paymentType]);
 
   // Dates that already have bookings for the selected tour type + room
   // Used to show strikethrough in the date picker
@@ -297,7 +310,9 @@ export default function BookingForm({ editingBooking, onEditDone, initialDate, b
               >
                 <option value="">— Select Room —</option>
                 {ROOM_UNITS.map((r) => (
-                  <option key={r} value={r}>{r}</option>
+                  <option key={r.name} value={r.name}>
+                    {r.name} — {formatPeso(r.price)}
+                  </option>
                 ))}
               </select>
             </div>
@@ -334,14 +349,13 @@ export default function BookingForm({ editingBooking, onEditDone, initialDate, b
               <label className={labelCls}>Amount (₱) *</label>
               <input
                 name="amount"
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.amount}
-                onChange={handleNumberChange}
-                required
-                placeholder="0.00"
-                className={inputCls}
+                type="text"
+                value={form.amount === '' ? '' : formatPeso(form.amount)}
+                readOnly
+                disabled
+                placeholder="Select room & payment"
+                className={`${inputCls} bg-gray-50 text-gray-700 font-semibold cursor-not-allowed`}
+                title={form.paymentType === 'full' ? 'Full payment — 100% of room price' : 'Downpayment — 50% of room price'}
               />
             </div>
             <div>
