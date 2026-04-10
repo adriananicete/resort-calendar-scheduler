@@ -15,6 +15,14 @@ body {
   font-family: inherit;
 }
 
+/* Month/year title in the toolbar — larger and bolder */
+.rbc-toolbar-label {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
 /* Ensure toolbar buttons are always clickable (Tailwind preflight fix) */
 .rbc-toolbar button {
   cursor: pointer !important;
@@ -26,10 +34,12 @@ body {
   background-color: #e2e8f0;
 }
 
-.rbc-toolbar button.rbc-active {
-  background-color: #6366F1 !important;
+.rbc-toolbar button.rbc-active,
+.rbc-toolbar button.rbc-active:hover,
+.rbc-toolbar button.rbc-active:focus {
+  background: linear-gradient(to right, #334155, #1e293b) !important;
   color: #fff !important;
-  border-color: #6366F1 !important;
+  border-color: #1e293b !important;
 }
 
 /* Box-like month cells — equal height rows */

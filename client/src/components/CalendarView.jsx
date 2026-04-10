@@ -84,11 +84,11 @@ export default function CalendarView({ bookings, onSelectSlot, formHeight }) {
     : 580;
 
   return (
-    <div className="bg-white rounded-2xl shadow-md flex flex-col">
+    <div className="bg-white rounded-lg shadow-md flex flex-col">
       {/* Header */}
       <div
         ref={headerRef}
-        className="bg-gradient-to-r from-slate-700 to-slate-800 px-5 py-4 rounded-t-2xl"
+        className="bg-gradient-to-r from-slate-700 to-slate-800 px-5 py-4 rounded-t-lg"
       >
         <h2 className="text-white font-bold text-lg">📆 Booking Calendar</h2>
         <div className="flex flex-wrap gap-3 mt-2">

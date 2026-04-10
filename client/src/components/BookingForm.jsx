@@ -165,11 +165,11 @@ export default function BookingForm({ editingBooking, onEditDone, initialDate, b
     <>
       <div className="bg-white rounded-2xl shadow-md overflow-hidden">
         {/* Form Header */}
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-4">
+        <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-5 py-4">
           <h2 className="text-white font-bold text-lg">
             {isEditing ? '✏️ Edit Booking' : '📋 New Booking'}
           </h2>
-          <p className="text-indigo-200 text-xs mt-0.5">
+          <p className="text-slate-300 text-xs mt-0.5">
             {isEditing ? 'Update reservation details below' : 'Fill in the reservation details below'}
           </p>
         </div>
@@ -417,7 +417,7 @@ export default function BookingForm({ editingBooking, onEditDone, initialDate, b
               className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition
                 ${submitting || hasConflict || checking
                   ? 'bg-gray-300 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-md'}`}
+                  : 'bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900 shadow-md'}`}
             >
               {checking
                 ? 'Checking...'
