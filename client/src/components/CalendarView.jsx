@@ -34,6 +34,40 @@ export default function CalendarView({ bookings, onSelectSlot, formHeight }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentView, setCurrentView] = useState('month');
 
+  // Custom date number — tap/click opens the booking form directly.
+  // Uses pointerdown so it fires before any touch-related preventDefaults,
+  // and applies touch-action: manipulation to kill mobile tap delay.
+  const calendarComponents = useMemo(() => ({
+    month: {
+      dateHeader: ({ date, label }) => {
+        const trigger = (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          onSelectSlot(date);
+        };
+        return (
+          <button
+            type="button"
+            onPointerDown={trigger}
+            onClick={(e) => e.stopPropagation()}
+            className="rbc-button-link"
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+              font: 'inherit',
+              color: 'inherit',
+              touchAction: 'manipulation',
+            }}
+          >
+            {label}
+          </button>
+        );
+      },
+    },
+  }), [onSelectSlot]);
+
   // Measure header height so we can subtract it from the total
   const headerRef = useRef(null);
   const [headerHeight, setHeaderHeight] = useState(90);
@@ -81,11 +115,8 @@ export default function CalendarView({ bookings, onSelectSlot, formHeight }) {
           onView={(view) => setCurrentView(view)}
           views={['month', 'week', 'day']}
           style={{ height: calHeight }}
-          selectable
           onSelectEvent={() => {}}
-          onSelectSlot={(slotInfo) => onSelectSlot(slotInfo.start)}
-          drilldownView={null}
-          onDrillDown={(date) => onSelectSlot(date)}
+          components={calendarComponents}
           eventPropGetter={(event) => getEventStyle(event.resource?.tourType)}
           popup
           tooltipAccessor={(event) => TOUR_TYPE_DISPLAY[event.resource?.tourType] || ''}

@@ -37,14 +37,24 @@ export default function App() {
     return () => { document.body.style.overflow = prev; };
   }, [isMobileFormOpen]);
 
+  const justOpenedRef = useRef(0);
+
   function handleCalendarSlotClick(date) {
     setEditingBooking(null);
     setInitialDate(date);
     if (isMobileViewport()) {
+      justOpenedRef.current = Date.now();
       setIsMobileFormOpen(true);
     } else {
       document.getElementById('booking-form-panel')?.scrollIntoView({ behavior: 'smooth' });
     }
+  }
+
+  function handleBackdropClick(e) {
+    if (!isMobileFormOpen) return;
+    if (e.target !== e.currentTarget) return;
+    if (Date.now() - justOpenedRef.current < 400) return;
+    setIsMobileFormOpen(false);
   }
 
   function handleEditDone() {
@@ -88,7 +98,7 @@ export default function App() {
         {/* Left Panel — Booking Form (inline on desktop, modal on mobile) */}
         <div
           id="booking-form-panel"
-          onClick={() => isMobileFormOpen && setIsMobileFormOpen(false)}
+          onClick={handleBackdropClick}
           className={`
             ${isMobileFormOpen
               ? 'fixed inset-0 z-[60] flex items-start justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto'
