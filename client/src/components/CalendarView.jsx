@@ -29,7 +29,52 @@ function toCalendarEvents(bookings) {
   }));
 }
 
-export default function CalendarView({ bookings, onSelectSlot, formHeight }) {
+const VIEW_LABELS = { month: 'Month', week: 'Week', day: 'Day' };
+
+function CustomToolbar({ label, onNavigate, onView, view, views, onNewBooking }) {
+  return (
+    <div className="calendar-toolbar">
+      {/* Mobile-only: title row with New Booking button */}
+      <div className="calendar-toolbar__title-row">
+        <span className="rbc-toolbar-label">{label}</span>
+        <button
+          type="button"
+          onClick={onNewBooking}
+          className="calendar-toolbar__new-btn"
+        >
+          <span className="text-base leading-none">+</span> New Booking
+        </button>
+      </div>
+
+      {/* Nav row — always visible */}
+      <div className="calendar-toolbar__nav-row">
+        <span className="rbc-btn-group">
+          <button type="button" onClick={() => onNavigate('TODAY')}>Today</button>
+          <button type="button" onClick={() => onNavigate('PREV')}>‹</button>
+          <button type="button" onClick={() => onNavigate('NEXT')}>›</button>
+        </span>
+
+        {/* Desktop-only centered label */}
+        <span className="rbc-toolbar-label calendar-toolbar__label-desktop">{label}</span>
+
+        <span className="rbc-btn-group">
+          {views.map((v) => (
+            <button
+              key={v}
+              type="button"
+              className={view === v ? 'rbc-active' : ''}
+              onClick={() => onView(v)}
+            >
+              {VIEW_LABELS[v] || v}
+            </button>
+          ))}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+export default function CalendarView({ bookings, onSelectSlot, onNewBooking, formHeight }) {
   const events = useMemo(() => toCalendarEvents(bookings), [bookings]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentView, setCurrentView] = useState('month');
@@ -66,7 +111,10 @@ export default function CalendarView({ bookings, onSelectSlot, formHeight }) {
         );
       },
     },
-  }), [onSelectSlot]);
+    toolbar: (toolbarProps) => (
+      <CustomToolbar {...toolbarProps} onNewBooking={onNewBooking} />
+    ),
+  }), [onSelectSlot, onNewBooking]);
 
   // Measure header height so we can subtract it from the total
   const headerRef = useRef(null);

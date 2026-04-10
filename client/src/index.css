@@ -23,6 +23,77 @@ body {
   letter-spacing: -0.01em;
 }
 
+/* ===== Custom calendar toolbar layout ===== */
+.calendar-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.calendar-toolbar__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.calendar-toolbar__nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.calendar-toolbar__new-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(to right, #334155, #1e293b);
+  color: #fff;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+  touch-action: manipulation;
+}
+.calendar-toolbar__new-btn:hover {
+  background: linear-gradient(to right, #1e293b, #0f172a);
+}
+.calendar-toolbar__new-btn:active {
+  transform: scale(0.96);
+}
+
+/* Desktop layout: hide mobile title row, show centered desktop label */
+@media (min-width: 1024px) {
+  .calendar-toolbar__title-row {
+    display: none;
+  }
+  .calendar-toolbar__label-desktop {
+    flex: 1;
+    text-align: center;
+  }
+}
+
+/* Mobile layout: hide desktop centered label, add breathing room */
+@media (max-width: 1023px) {
+  .calendar-toolbar__label-desktop {
+    display: none;
+  }
+  .calendar-toolbar__nav-row .rbc-btn-group {
+    display: inline-flex;
+    gap: 4px;
+  }
+  .calendar-toolbar__nav-row .rbc-btn-group > button {
+    padding: 6px 12px;
+  }
+}
+
 /* Ensure toolbar buttons are always clickable (Tailwind preflight fix) */
 .rbc-toolbar button {
   cursor: pointer !important;

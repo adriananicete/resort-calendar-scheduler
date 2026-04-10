@@ -93,18 +93,9 @@ export default function App() {
               <p className="text-gray-400 text-xs">Manage reservations in real-time</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={handleNewBookingClick}
-              className="lg:hidden inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-gradient-to-r from-slate-700 to-slate-800 text-white text-xs font-bold shadow hover:from-slate-800 hover:to-slate-900 active:scale-95 transition"
-            >
-              <span className="text-base leading-none">+</span> New Booking
-            </button>
-            <div className="hidden sm:flex items-center gap-2 text-xs text-gray-500">
-              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span>Live sync active</span>
-            </div>
+          <div className="hidden sm:flex items-center gap-2 text-xs text-gray-500">
+            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            <span>Live sync active</span>
           </div>
         </div>
       </header>
@@ -160,6 +151,7 @@ export default function App() {
             <CalendarView
               bookings={bookings}
               onSelectSlot={handleCalendarSlotClick}
+              onNewBooking={handleNewBookingClick}
               formHeight={formHeight}
             />
           )}
