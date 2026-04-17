@@ -15,6 +15,7 @@ export async function findConflicts({ roomUnit, checkIn, checkOut, excludeId = n
     roomUnit,
     checkIn: { $lt: new Date(checkOut) },
     checkOut: { $gt: new Date(checkIn) },
+    status: { $ne: 'expired' },
   };
 
   if (excludeId) {

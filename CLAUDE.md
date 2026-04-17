@@ -18,8 +18,9 @@ Calendar-Scheduler/
 │   ├── models/Booking.js     ← Mongoose schema (includes status, bookingId, expiresAt)
 │   ├── routes/bookings.js    ← CRUD routes + conflict-check + status-check endpoint
 │   ├── routes/webhooks.js    ← GoHighLevel payment webhook receiver
-│   ├── utils/conflictCheck.js← MongoDB overlap query logic
+│   ├── utils/conflictCheck.js← MongoDB overlap query logic (excludes expired)
 │   ├── utils/generateBookingId.js ← BK-YYYYMMDD-NNN generator
+│   ├── utils/resetBookings.js ← one-off DB wipe script (deletes all bookings)
 │   └── middleware/validateBooking.js ← express-validator rules
 └── client/
     ├── vite.config.js        ← proxy /api → localhost:5000
@@ -31,6 +32,7 @@ Calendar-Scheduler/
         ├── components/
         │   ├── BookingForm.jsx        ← booking form with GHL redirect, tour type sync
         │   ├── BookingConfirmModal.jsx ← review modal before final submit
+        │   ├── PaymentReminderModal.jsx ← post-create modal with GHL payment link
         │   ├── CalendarView.jsx       ← react-big-calendar with tour type filter tabs
         │   └── BookingModal.jsx       ← exists but NOT used (disabled for client privacy)
         ├── pages/
@@ -40,7 +42,7 @@ Calendar-Scheduler/
         │   └── useConflictCheck.js   ← debounced live conflict check
         ├── services/api.js   ← axios instance, all API call functions + getBookingStatus
         ├── socket/socket.js  ← singleton socket.io-client
-        └── utils/tourTypeHelpers.js  ← calculateCheckOut, TOUR_COLORS, ROOM_UNITS, getEventStyle(status)
+        └── utils/tourTypeHelpers.js  ← calculateCheckIn, calculateCheckOut, TOUR_COLORS, ROOM_UNITS, getEventStyle(status)
 ```
 
 ## Running the App
@@ -65,6 +67,12 @@ npm run dev
 cd server && npm run dev   # nodemon, port 5000
 cd client && npm run dev   # vite, port 5173
 ```
+
+### Reset Local DB (wipe all bookings)
+```bash
+cd server && node utils/resetBookings.js
+```
+Uses `MONGODB_URI` from `server/.env` — connects, runs `Booking.deleteMany({})`, disconnects.
 
 ## Environment Variables
 
@@ -118,13 +126,17 @@ VITE_GHL_PAYMENT_URL=https://your-ghl-order-form-url.com
 
 ## Tour Types & Checkout Logic
 
-| Tour Type | Time | Checkout Calc |
-|-----------|------|---------------|
-| `day` | 8am – 5pm | Same day, 5:00 PM |
-| `night` | 7pm – 6am | +1 day, 6:00 AM |
-| `overnight` | 7pm – next 5pm | +1 day, 5:00 PM |
+| Tour Type | Check-in | Checkout |
+|-----------|----------|----------|
+| `day` | 8:00 AM | Same day, 5:00 PM |
+| `night` | 7:00 PM | +1 day, 6:00 AM |
+| `overnight` | 7:00 PM | +1 day, 5:00 PM |
 
-Logic is in `client/src/utils/tourTypeHelpers.js` → `calculateCheckOut()`.
+Logic is in `client/src/utils/tourTypeHelpers.js`:
+- `calculateCheckIn(selectedDate, tourType)` — DatePicker gives midnight; this sets the real start time (8am for day, 7pm for night/overnight).
+- `calculateCheckOut(checkInDate, tourType)` — computes the end time per table above.
+
+**Critical:** `BookingForm.jsx` must use `calculateCheckIn` to derive `actualCheckIn` and pass that to `useConflictCheck` and the API payload. Sending the raw midnight date causes false conflicts (e.g. night tour Apr 23 saved at 00:00 would overlap a new day tour Apr 23 also at 00:00, even though real times are 7pm vs 8am — no actual overlap).
 
 ## Calendar Behavior & Design
 
@@ -148,6 +160,14 @@ Logic is in `client/src/utils/tourTypeHelpers.js` → `calculateCheckOut()`.
 - Clicking a booked event does **nothing** — guest details are intentionally hidden from public view
 - `BookingModal.jsx` exists but is not wired up (kept for potential future admin use)
 
+### Event Span (Visual Clipping)
+`CalendarView.jsx` → `getDisplayEnd(booking)` decouples the **visual span** from the actual checkout time:
+- **Day tour** — shown on check-in date only (actual: same-day 5pm)
+- **Night tour** — **clipped** to end of check-in date (actual: next-day 6am). The 6am overflow doesn't block anything (next day's earliest tour is 8am day tour), so spanning two days in the UI would mislead users into thinking the next day is taken.
+- **Overnight** — spans **both days** on the calendar (actual: next-day 5pm). This genuinely blocks next day's day tour (8am–5pm fully overlaps), so both days are correctly shown as occupied.
+
+Backend conflict logic is untouched — it uses real `checkIn`/`checkOut` times. Only the calendar render is adjusted.
+
 ### Controlled Calendar State
 `CalendarView.jsx` uses controlled `date` and `view` state with `onNavigate` and `onView` callbacks. Do **not** switch back to `defaultView` — it breaks navigation.
 ```jsx
@@ -164,12 +184,18 @@ const [currentView, setCurrentView] = useState('month');
 
 MongoDB overlap query in `server/utils/conflictCheck.js`:
 ```js
-{ roomUnit, checkIn: { $lt: reqCheckOut }, checkOut: { $gt: reqCheckIn } }
+{
+  roomUnit,
+  checkIn:  { $lt: reqCheckOut },
+  checkOut: { $gt: reqCheckIn },
+  status:   { $ne: 'expired' },   // expired pending bookings don't block
+}
 ```
 - POST: no excludeId
 - PUT: pass `excludeId` to avoid self-conflict
+- `GET /api/bookings` also filters out `status: expired` so the client never renders or counts them.
 
-Frontend checks live via `useConflictCheck` hook (debounced 500ms). Submit is blocked if conflict is detected.
+Frontend checks live via `useConflictCheck` hook (debounced 500ms). The hook receives **`actualCheckIn`** from `BookingForm.jsx` (not the raw midnight DatePicker date) so time-of-day is accurate. Submit is blocked if conflict is detected.
 
 **Privacy rule:** Conflict warning must never show the name of the existing guest — only show the room name and that it is unavailable. This is enforced in `BookingForm.jsx` conflict warning section.
 

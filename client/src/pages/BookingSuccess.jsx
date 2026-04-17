@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { getBookingStatus } from '../services/api';
 
 const MAX_POLLS = 20;
@@ -65,9 +66,7 @@ export default function BookingSuccess() {
         {status === 'confirmed' && (
           <>
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-              <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
+              <CheckCircle2 className="w-9 h-9 text-green-600" strokeWidth={2.25} />
             </div>
             <h2 className="text-xl font-bold text-gray-800 mt-6">Booking Confirmed!</h2>
             {guestName && (
@@ -91,9 +90,7 @@ export default function BookingSuccess() {
         {status === 'not_found' && (
           <>
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
-              <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <XCircle className="w-9 h-9 text-red-600" strokeWidth={2.25} />
             </div>
             <h2 className="text-xl font-bold text-gray-800 mt-6">Booking Expired</h2>
             <p className="text-gray-500 mt-2 text-sm">
@@ -111,9 +108,7 @@ export default function BookingSuccess() {
         {status === 'timeout' && (
           <>
             <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
-              <svg className="w-8 h-8 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-              </svg>
+              <Clock className="w-9 h-9 text-amber-600" strokeWidth={2.25} />
             </div>
             <h2 className="text-xl font-bold text-gray-800 mt-6">Payment Not Yet Received</h2>
             <p className="text-gray-500 mt-2 text-sm">

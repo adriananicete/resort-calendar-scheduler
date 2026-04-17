@@ -1,4 +1,5 @@
 import { createPortal } from 'react-dom';
+import { ArrowLeft, Check } from 'lucide-react';
 import { TOUR_LABELS, TOUR_COLORS, formatDateTime } from '../utils/tourTypeHelpers';
 
 export default function BookingConfirmModal({ booking, checkOut, onConfirm, onCancel, submitting }) {
@@ -44,17 +45,25 @@ export default function BookingConfirmModal({ booking, checkOut, onConfirm, onCa
           <button
             onClick={onCancel}
             disabled={submitting}
-            className="flex-1 py-2.5 rounded-xl border-2 border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition disabled:opacity-50"
+            className="flex-1 py-2.5 rounded-xl border-2 border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition disabled:opacity-50 flex items-center justify-center gap-1.5"
           >
-            ← Go Back
+            <ArrowLeft className="w-4 h-4" strokeWidth={2.5} />
+            Go Back
           </button>
           <button
             onClick={onConfirm}
             disabled={submitting}
-            className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition disabled:opacity-70"
+            className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition disabled:opacity-70 flex items-center justify-center gap-1.5"
             style={{ backgroundColor: submitting ? '#9ca3af' : tourColor }}
           >
-            {submitting ? 'Submitting...' : 'Confirm & Book ✓'}
+            {submitting ? (
+              'Submitting...'
+            ) : (
+              <>
+                <Check className="w-4 h-4" strokeWidth={3} />
+                Confirm &amp; Book
+              </>
+            )}
           </button>
         </div>
       </div>

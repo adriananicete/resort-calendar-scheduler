@@ -3,9 +3,11 @@ import DatePicker from 'react-datepicker';
 import { isSameDay } from 'date-fns';
 import 'react-datepicker/dist/react-datepicker.css';
 import toast from 'react-hot-toast';
+import { ClipboardList, Pencil, AlertTriangle } from 'lucide-react';
 import {
   ROOM_UNITS,
   TOUR_LABELS,
+  calculateCheckIn,
   calculateCheckOut,
   formatDateTime,
   getRoomPrice,
@@ -68,6 +70,12 @@ export default function BookingForm({ editingBooking, onEditDone, initialDate, b
     }
   }, [activeTourType]);
 
+  // Derived actual check-in time (8am day, 7pm night/overnight) — DatePicker gives midnight
+  const actualCheckIn = useMemo(
+    () => calculateCheckIn(form.checkIn, form.tourType),
+    [form.checkIn, form.tourType],
+  );
+
   // Recalculate checkout when checkIn or tourType changes
   useEffect(() => {
     if (form.checkIn && form.tourType) {
@@ -103,7 +111,7 @@ export default function BookingForm({ editingBooking, onEditDone, initialDate, b
 
   const { hasConflict, conflicts, checking } = useConflictCheck({
     roomUnit:  form.roomUnit,
-    checkIn:   form.checkIn,
+    checkIn:   actualCheckIn,
     checkOut,
     excludeId: editingBooking?._id,
   });
@@ -147,7 +155,7 @@ export default function BookingForm({ editingBooking, onEditDone, initialDate, b
   async function handleConfirm() {
     const payload = {
       ...form,
-      checkIn:  form.checkIn.toISOString(),
+      checkIn:  actualCheckIn.toISOString(),
       checkOut: checkOut.toISOString(),
     };
 
@@ -197,9 +205,14 @@ export default function BookingForm({ editingBooking, onEditDone, initialDate, b
       <div className="bg-white rounded-2xl shadow-md overflow-hidden">
         {/* Form Header */}
         <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-5 py-4">
-          <h2 className="text-white font-bold text-lg">
-            {isEditing ? '✏️ Edit Booking' : '📋 New Booking'}
-          </h2>
+          <div className="flex items-center gap-2.5">
+            {isEditing
+              ? <Pencil className="w-5 h-5 text-white" strokeWidth={2.25} />
+              : <ClipboardList className="w-5 h-5 text-white" strokeWidth={2.25} />}
+            <h2 className="text-white font-bold text-lg">
+              {isEditing ? 'Edit Booking' : 'New Booking'}
+            </h2>
+          </div>
           <p className="text-slate-300 text-xs mt-0.5">
             {isEditing ? 'Update reservation details below' : 'Fill in the reservation details below'}
           </p>
@@ -207,8 +220,8 @@ export default function BookingForm({ editingBooking, onEditDone, initialDate, b
 
         {/* Conflict Warning — no names shown for privacy */}
         {hasConflict && (
-          <div className="mx-4 mt-4 bg-red-50 border border-red-300 rounded-lg p-3 flex items-start gap-2">
-            <span className="text-red-500 text-lg leading-none">⚠️</span>
+          <div className="mx-4 mt-4 bg-red-50 border border-red-300 rounded-lg p-3 flex items-start gap-2.5">
+            <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" strokeWidth={2.25} />
             <div>
               <p className="text-red-700 font-semibold text-sm">This date is already booked!</p>
               {conflicts.map((c, i) => (
@@ -463,7 +476,7 @@ export default function BookingForm({ editingBooking, onEditDone, initialDate, b
       {/* Confirmation Modal */}
       {showConfirm && (
         <BookingConfirmModal
-          booking={form}
+          booking={{ ...form, checkIn: actualCheckIn }}
           checkOut={checkOut}
           onConfirm={handleConfirm}
           onCancel={() => setShowConfirm(false)}

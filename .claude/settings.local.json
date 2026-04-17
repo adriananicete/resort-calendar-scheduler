@@ -19,7 +19,12 @@
       "Bash(git push:*)",
       "Bash(curl:*)",
       "Bash(npm run:*)",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(mongosh *)",
+      "Bash(node utils/resetBookings.js)",
+      "Bash(grep -E \"\\\\.jsx$\")",
+      "Bash(xargs ls *)",
+      "Bash(npm uninstall *)"
     ]
   }
 }

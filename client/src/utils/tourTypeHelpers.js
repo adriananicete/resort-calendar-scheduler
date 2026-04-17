@@ -30,6 +30,32 @@ export function formatPeso(value) {
 }
 
 /**
+ * Calculate the actual check-in date/time based on the selected date and tour type.
+ * The DatePicker returns midnight — this sets the real start time.
+ * @param {Date} selectedDate - date from DatePicker (midnight)
+ * @param {string} tourType - 'day' | 'night' | 'overnight'
+ * @returns {Date|null}
+ */
+export function calculateCheckIn(selectedDate, tourType) {
+  if (!selectedDate || !tourType) return null;
+
+  const base = new Date(selectedDate);
+  const clean = (d) => setSeconds(setMinutes(d, 0), 0);
+
+  switch (tourType) {
+    case 'day':
+      // Same day, 8:00 AM
+      return clean(setHours(base, 8));
+    case 'night':
+    case 'overnight':
+      // Same day, 7:00 PM
+      return clean(setHours(base, 19));
+    default:
+      return null;
+  }
+}
+
+/**
  * Calculate checkout date/time based on check-in date and tour type.
  * @param {Date} checkInDate
  * @param {string} tourType - 'day' | 'night' | 'overnight'

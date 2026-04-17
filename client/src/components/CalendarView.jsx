@@ -3,6 +3,7 @@ import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale/en-US';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
+import { CalendarDays, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { TOUR_COLORS, ROOM_UNITS, getEventStyle } from '../utils/tourTypeHelpers';
 
 const localizer = dateFnsLocalizer({
@@ -19,12 +20,27 @@ const TOUR_TYPE_DISPLAY = {
   overnight: 'Overnight',
 };
 
+// For calendar display we sometimes show a shorter span than the actual
+// checkout to avoid confusing users. Night tour's 6am-next-day checkout
+// doesn't block anything the next day, so we clip it to the check-in date.
+// Overnight genuinely blocks the next day's day tour, so we keep it spanning.
+function getDisplayEnd(b) {
+  const checkIn = new Date(b.checkIn);
+  const checkOut = new Date(b.checkOut);
+  if (b.tourType === 'night') {
+    const end = new Date(checkIn);
+    end.setHours(23, 59, 0, 0);
+    return end;
+  }
+  return checkOut;
+}
+
 function toCalendarEvents(bookings) {
   return bookings.map((b) => ({
     id:       b._id,
     title:    `${TOUR_TYPE_DISPLAY[b.tourType] || b.tourType}: ${b.roomUnit}`,
     start:    new Date(b.checkIn),
-    end:      new Date(b.checkOut),
+    end:      getDisplayEnd(b),
     resource: b,
   }));
 }
@@ -42,7 +58,7 @@ function CustomToolbar({ label, onNavigate, onView, view, views, onNewBooking })
           onClick={onNewBooking}
           className="calendar-toolbar__new-btn"
         >
-          <span className="text-base leading-none">+</span> New Booking
+          <Plus className="w-4 h-4" strokeWidth={2.5} /> New Booking
         </button>
       </div>
 
@@ -50,8 +66,22 @@ function CustomToolbar({ label, onNavigate, onView, view, views, onNewBooking })
       <div className="calendar-toolbar__nav-row">
         <span className="rbc-btn-group">
           <button type="button" onClick={() => onNavigate('TODAY')}>Today</button>
-          <button type="button" onClick={() => onNavigate('PREV')}>‹</button>
-          <button type="button" onClick={() => onNavigate('NEXT')}>›</button>
+          <button
+            type="button"
+            onClick={() => onNavigate('PREV')}
+            aria-label="Previous"
+            className="inline-flex items-center justify-center"
+          >
+            <ChevronLeft className="w-4 h-4" strokeWidth={2.5} />
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigate('NEXT')}
+            aria-label="Next"
+            className="inline-flex items-center justify-center"
+          >
+            <ChevronRight className="w-4 h-4" strokeWidth={2.5} />
+          </button>
         </span>
 
         {/* Desktop-only centered label */}
@@ -164,7 +194,10 @@ export default function CalendarView({ bookings, onSelectSlot, onNewBooking, for
         ref={headerRef}
         className="bg-gradient-to-r from-slate-700 to-slate-800 px-5 py-4 rounded-t-lg"
       >
-        <h2 className="text-white font-bold text-lg">📆 Booking Calendar</h2>
+        <h2 className="text-white font-bold text-lg flex items-center gap-2.5">
+          <CalendarDays className="w-5 h-5" strokeWidth={2.25} />
+          Booking Calendar
+        </h2>
         <div className="flex gap-2 mt-3">
           {TOUR_TAB_KEYS.map((key) => {
             const isActive = activeTourType === key;

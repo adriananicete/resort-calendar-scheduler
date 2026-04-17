@@ -43,7 +43,7 @@ router.get('/status/:bookingId', async (req, res) => {
 // GET /api/bookings — fetch all bookings
 router.get('/', async (_req, res) => {
   try {
-    const bookings = await Booking.find().sort({ checkIn: 1 });
+    const bookings = await Booking.find({ status: { $ne: 'expired' } }).sort({ checkIn: 1 });
     res.json(bookings);
   } catch (err) {
     res.status(500).json({ message: err.message });
