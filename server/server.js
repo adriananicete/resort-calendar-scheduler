@@ -5,6 +5,8 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import bookingRoutes from './routes/bookings.js';
+import webhookRoutes from './routes/webhooks.js';
+import Booking from './models/Booking.js';
 
 dotenv.config();
 
@@ -33,6 +35,7 @@ app.use((req, _res, next) => {
 });
 
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/webhooks', webhookRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
@@ -42,10 +45,35 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => console.log(`Client disconnected: ${socket.id}`));
 });
 
+// Clean up expired pending bookings every 5 minutes
+// (TTL index handles deletion, but this emits socket events so clients update)
+function startPendingCleanup() {
+  setInterval(async () => {
+    try {
+      const expired = await Booking.find({
+        status: 'pending',
+        expiresAt: { $lte: new Date() },
+      }).select('_id bookingId');
+
+      for (const doc of expired) {
+        await Booking.findByIdAndDelete(doc._id);
+        io.emit('booking:deleted', { id: doc._id });
+      }
+
+      if (expired.length > 0) {
+        console.log(`Cleaned up ${expired.length} expired pending booking(s)`);
+      }
+    } catch (err) {
+      console.error('Pending cleanup error:', err.message);
+    }
+  }, 5 * 60 * 1000);
+}
+
 mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => {
     console.log('MongoDB connected');
+    startPendingCleanup();
     httpServer.listen(process.env.PORT, () =>
       console.log(`Server running on port ${process.env.PORT}`)
     );

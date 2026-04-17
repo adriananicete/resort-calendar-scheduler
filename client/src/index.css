@@ -94,23 +94,54 @@ body {
   }
 }
 
-/* Ensure toolbar buttons are always clickable (Tailwind preflight fix) */
-.rbc-toolbar button {
+/* Toolbar buttons — restore button appearance stripped by Tailwind preflight */
+.rbc-btn-group {
+  display: inline-flex !important;
+  gap: 0 !important;
+}
+
+.rbc-btn-group > button {
   cursor: pointer !important;
   pointer-events: auto !important;
-  display: inline-block !important;
+  background-color: #fff !important;
+  color: #374151 !important;
+  border: 1px solid #d1d5db !important;
+  padding: 6px 14px !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
 }
 
-.rbc-toolbar button:hover {
-  background-color: #e2e8f0;
+/* Rounded corners on first/last button in group */
+.rbc-btn-group > button:first-child {
+  border-radius: 6px 0 0 6px !important;
+}
+.rbc-btn-group > button:last-child {
+  border-radius: 0 6px 6px 0 !important;
+}
+.rbc-btn-group > button:only-child {
+  border-radius: 6px !important;
 }
 
-.rbc-toolbar button.rbc-active,
-.rbc-toolbar button.rbc-active:hover,
-.rbc-toolbar button.rbc-active:focus {
+/* Collapse double borders between adjacent buttons */
+.rbc-btn-group > button + button {
+  margin-left: -1px !important;
+}
+
+.rbc-btn-group > button:hover {
+  background-color: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+  z-index: 1;
+}
+
+.rbc-btn-group > button.rbc-active,
+.rbc-btn-group > button.rbc-active:hover,
+.rbc-btn-group > button.rbc-active:focus {
   background: linear-gradient(to right, #334155, #1e293b) !important;
   color: #fff !important;
   border-color: #1e293b !important;
+  z-index: 2;
 }
 
 /* Box-like month cells — equal height rows */

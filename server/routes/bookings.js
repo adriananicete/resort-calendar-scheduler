@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import Booking from '../models/Booking.js';
 import { findConflicts } from '../utils/conflictCheck.js';
+import { generateBookingId } from '../utils/generateBookingId.js';
 import {
   bookingValidationRules,
   conflictCheckRules,
@@ -24,6 +25,20 @@ router.get(
     }
   }
 );
+
+// GET /api/bookings/status/:bookingId — check booking payment status
+router.get('/status/:bookingId', async (req, res) => {
+  try {
+    const booking = await Booking.findOne({ bookingId: req.params.bookingId })
+      .select('bookingId status guestName');
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found or expired' });
+    }
+    res.json(booking);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
 // GET /api/bookings — fetch all bookings
 router.get('/', async (_req, res) => {
@@ -52,7 +67,15 @@ router.post(
         });
       }
 
-      const booking = new Booking(req.body);
+      const bookingId = await generateBookingId();
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+
+      const booking = new Booking({
+        ...req.body,
+        bookingId,
+        status: 'pending',
+        expiresAt,
+      });
       const saved = await booking.save();
 
       req.io.emit('booking:created', saved);

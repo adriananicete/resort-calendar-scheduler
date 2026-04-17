@@ -3,7 +3,7 @@ import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale/en-US';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
-import { TOUR_COLORS, TOUR_LABELS, getEventStyle } from '../utils/tourTypeHelpers';
+import { TOUR_COLORS, ROOM_UNITS, getEventStyle } from '../utils/tourTypeHelpers';
 
 const localizer = dateFnsLocalizer({
   format,
@@ -74,8 +74,34 @@ function CustomToolbar({ label, onNavigate, onView, view, views, onNewBooking })
   );
 }
 
-export default function CalendarView({ bookings, onSelectSlot, onNewBooking, formHeight }) {
-  const events = useMemo(() => toCalendarEvents(bookings), [bookings]);
+const TOUR_TAB_KEYS = ['day', 'night', 'overnight'];
+const TOUR_TAB_LABELS = { day: 'Day Tour', night: 'Night Tour', overnight: 'Overnight' };
+const TOTAL_ROOMS = ROOM_UNITS.length;
+
+export default function CalendarView({ bookings, onSelectSlot, onNewBooking, formHeight, activeTourType, onTourTypeChange }) {
+  // Filter events by active tour type
+  const events = useMemo(() => {
+    const filtered = bookings.filter((b) => b.tourType === activeTourType);
+    return toCalendarEvents(filtered);
+  }, [bookings, activeTourType]);
+
+  // Compute fully booked dates for the active tour type
+  const fullyBookedSet = useMemo(() => {
+    const dateRoomMap = new Map(); // dateKey → Set of roomUnits
+    bookings
+      .filter((b) => b.tourType === activeTourType)
+      .forEach((b) => {
+        const key = new Date(b.checkIn).toDateString();
+        if (!dateRoomMap.has(key)) dateRoomMap.set(key, new Set());
+        dateRoomMap.get(key).add(b.roomUnit);
+      });
+    const fullyBooked = new Set();
+    for (const [key, rooms] of dateRoomMap) {
+      if (rooms.size >= TOTAL_ROOMS) fullyBooked.add(key);
+    }
+    return fullyBooked;
+  }, [bookings, activeTourType]);
+
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentView, setCurrentView] = useState('month');
 
@@ -133,22 +159,31 @@ export default function CalendarView({ bookings, onSelectSlot, onNewBooking, for
 
   return (
     <div className="bg-white rounded-lg shadow-md flex flex-col">
-      {/* Header */}
+      {/* Header with Tour Type Tabs */}
       <div
         ref={headerRef}
         className="bg-gradient-to-r from-slate-700 to-slate-800 px-5 py-4 rounded-t-lg"
       >
         <h2 className="text-white font-bold text-lg">📆 Booking Calendar</h2>
-        <div className="flex flex-wrap gap-3 mt-2">
-          {Object.entries(TOUR_LABELS).map(([key, label]) => (
-            <div key={key} className="flex items-center gap-1.5">
-              <span
-                className="w-3 h-3 rounded-full flex-shrink-0"
-                style={{ backgroundColor: TOUR_COLORS[key] }}
-              />
-              <span className="text-slate-300 text-xs">{label.split('(')[0].trim()}</span>
-            </div>
-          ))}
+        <div className="flex gap-2 mt-3">
+          {TOUR_TAB_KEYS.map((key) => {
+            const isActive = activeTourType === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => onTourTypeChange(key)}
+                className="px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all"
+                style={{
+                  backgroundColor: isActive ? TOUR_COLORS[key] : 'transparent',
+                  color: isActive ? '#fff' : 'rgba(255,255,255,0.6)',
+                  border: isActive ? 'none' : '1px solid rgba(255,255,255,0.25)',
+                }}
+              >
+                {TOUR_TAB_LABELS[key]}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -165,7 +200,13 @@ export default function CalendarView({ bookings, onSelectSlot, onNewBooking, for
           style={{ height: calHeight }}
           onSelectEvent={() => {}}
           components={calendarComponents}
-          eventPropGetter={(event) => getEventStyle(event.resource?.tourType)}
+          eventPropGetter={(event) => getEventStyle(event.resource?.tourType, event.resource?.status)}
+          dayPropGetter={(date) => {
+            if (fullyBookedSet.has(date.toDateString())) {
+              return { style: { backgroundColor: '#fef2f2' } };
+            }
+            return {};
+          }}
           popup
           tooltipAccessor={(event) => TOUR_TYPE_DISPLAY[event.resource?.tourType] || ''}
           formats={{

@@ -13,6 +13,7 @@ export default function App() {
   const [editingBooking, setEditingBooking] = useState(null);
   const [initialDate, setInitialDate]       = useState(null);
   const [isMobileFormOpen, setIsMobileFormOpen] = useState(false);
+  const [activeTourType, setActiveTourType] = useState('day');
 
   // Measure form height so calendar can match it (desktop only)
   const formRef = useRef(null);
@@ -134,6 +135,8 @@ export default function App() {
               onEditDone={handleEditDone}
               initialDate={initialDate}
               bookings={bookings}
+              activeTourType={activeTourType}
+              onTourTypeChange={setActiveTourType}
             />
           </div>
         </div>
@@ -153,6 +156,8 @@ export default function App() {
               onSelectSlot={handleCalendarSlotClick}
               onNewBooking={handleNewBookingClick}
               formHeight={formHeight}
+              activeTourType={activeTourType}
+              onTourTypeChange={setActiveTourType}
             />
           )}
         </div>

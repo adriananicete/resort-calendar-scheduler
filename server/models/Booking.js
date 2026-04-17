@@ -1,6 +1,11 @@
 import mongoose from 'mongoose';
 
 const bookingSchema = new mongoose.Schema({
+  bookingId: {
+    type: String,
+    unique: true,
+    sparse: true,
+  },
   guestName: {
     type: String,
     required: true,
@@ -60,6 +65,15 @@ const bookingSchema = new mongoose.Schema({
     default: '',
     trim: true,
   },
+  status: {
+    type: String,
+    enum: ['pending', 'confirmed', 'expired'],
+    default: 'confirmed',
+  },
+  expiresAt: {
+    type: Date,
+    default: null,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -68,5 +82,14 @@ const bookingSchema = new mongoose.Schema({
 
 // Compound index for fast conflict queries
 bookingSchema.index({ roomUnit: 1, checkIn: 1, checkOut: 1 });
+
+// TTL index — auto-delete pending bookings after expiresAt
+bookingSchema.index(
+  { expiresAt: 1 },
+  { expireAfterSeconds: 0, partialFilterExpression: { status: 'pending' } }
+);
+
+// Fast lookup for webhook email matching
+bookingSchema.index({ email: 1, status: 1 });
 
 export default mongoose.model('Booking', bookingSchema);

@@ -58,9 +58,11 @@ export function calculateCheckOut(checkInDate, tourType) {
 
 /**
  * Returns inline style object for react-big-calendar eventPropGetter.
+ * Pending bookings get dashed border + lower opacity.
  */
-export function getEventStyle(tourType) {
+export function getEventStyle(tourType, status) {
   const bg = TOUR_COLORS[tourType] || '#6B7280';
+  const isPending = status === 'pending';
   return {
     style: {
       backgroundColor: bg,
@@ -69,7 +71,8 @@ export function getEventStyle(tourType) {
       borderRadius: '4px',
       fontSize: '0.75rem',
       fontWeight: '500',
-      border: 'none',
+      border: isPending ? '2px dashed rgba(255,255,255,0.6)' : 'none',
+      opacity: isPending ? 0.55 : 1,
     },
   };
 }

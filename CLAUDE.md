@@ -4,7 +4,7 @@
 MERN stack one-page booking calendar for a private resort. Clients fill out a booking form (left panel) and see a Google Calendar-style month view (right panel). Real-time sync via Socket.io prevents double bookings. No authentication.
 
 ## Tech Stack
-- **Frontend:** React 18 (Vite) + TailwindCSS v3 + react-big-calendar + react-datepicker + react-hot-toast
+- **Frontend:** React 18 (Vite) + TailwindCSS v3 + react-big-calendar + react-datepicker + react-hot-toast + react-router-dom
 - **Backend:** Node.js + Express (ESM) + Socket.io v4
 - **Database:** MongoDB via Mongoose v8
 - **Real-time:** Socket.io — events: `booking:created`, `booking:updated`, `booking:deleted`
@@ -14,27 +14,33 @@ MERN stack one-page booking calendar for a private resort. Clients fill out a bo
 Calendar-Scheduler/
 ├── package.json              ← root: concurrently dev scripts
 ├── server/
-│   ├── server.js             ← Express + Socket.io + MongoDB entry point
-│   ├── models/Booking.js     ← Mongoose schema
-│   ├── routes/bookings.js    ← CRUD routes + conflict-check endpoint
+│   ├── server.js             ← Express + Socket.io + MongoDB + pending cleanup interval
+│   ├── models/Booking.js     ← Mongoose schema (includes status, bookingId, expiresAt)
+│   ├── routes/bookings.js    ← CRUD routes + conflict-check + status-check endpoint
+│   ├── routes/webhooks.js    ← GoHighLevel payment webhook receiver
 │   ├── utils/conflictCheck.js← MongoDB overlap query logic
+│   ├── utils/generateBookingId.js ← BK-YYYYMMDD-NNN generator
 │   └── middleware/validateBooking.js ← express-validator rules
 └── client/
     ├── vite.config.js        ← proxy /api → localhost:5000
+    ├── vercel.json           ← SPA rewrite for Vercel deployment
     ├── tailwind.config.js
     └── src/
-        ├── App.jsx           ← main layout: form (40%) | calendar (60%)
+        ├── main.jsx          ← BrowserRouter + routes (/ and /booking/success/:bookingId)
+        ├── App.jsx           ← main layout: form (40%) | calendar (60%), activeTourType state
         ├── components/
-        │   ├── BookingForm.jsx        ← booking form with auto checkout, strikethrough dates, confirm modal
+        │   ├── BookingForm.jsx        ← booking form with GHL redirect, tour type sync
         │   ├── BookingConfirmModal.jsx ← review modal before final submit
-        │   ├── CalendarView.jsx       ← react-big-calendar month/week/day view (controlled)
+        │   ├── CalendarView.jsx       ← react-big-calendar with tour type filter tabs
         │   └── BookingModal.jsx       ← exists but NOT used (disabled for client privacy)
+        ├── pages/
+        ���   └── BookingSuccess.jsx     ← post-payment polling page
         ├── hooks/
         │   ├── useBookings.js        ← fetch all + socket event listeners
         │   └── useConflictCheck.js   ← debounced live conflict check
-        ├── services/api.js   ← axios instance, all API call functions
+        ├── services/api.js   ← axios instance, all API call functions + getBookingStatus
         ├── socket/socket.js  ← singleton socket.io-client
-        └── utils/tourTypeHelpers.js  ← calculateCheckOut, TOUR_COLORS, ROOM_UNITS
+        └── utils/tourTypeHelpers.js  ← calculateCheckOut, TOUR_COLORS, ROOM_UNITS, getEventStyle(status)
 ```
 
 ## Running the App
@@ -67,6 +73,15 @@ cd client && npm run dev   # vite, port 5173
 PORT=5000
 MONGODB_URI=mongodb://localhost:27017/resort-scheduler
 CLIENT_URL=http://localhost:5173
+GHL_PAYMENT_URL=https://your-ghl-order-form-url.com
+GHL_WEBHOOK_SECRET=your-shared-secret-here
+```
+
+`client/.env`:
+```
+VITE_API_URL=/api
+VITE_SOCKET_URL=http://localhost:5000
+VITE_GHL_PAYMENT_URL=https://your-ghl-order-form-url.com
 ```
 
 ## API Endpoints
@@ -75,14 +90,17 @@ CLIENT_URL=http://localhost:5173
 |--------|----------|-------------|
 | GET | `/api/bookings` | Fetch all bookings |
 | GET | `/api/bookings/conflict-check` | Live conflict check (query: roomUnit, checkIn, checkOut, excludeId?) |
-| POST | `/api/bookings` | Create booking (409 if conflict) |
+| GET | `/api/bookings/status/:bookingId` | Check booking payment status (for success page polling) |
+| POST | `/api/bookings` | Create booking with status=pending + bookingId (409 if conflict) |
 | PUT | `/api/bookings/:id` | Update booking (409 if conflict) |
 | DELETE | `/api/bookings/:id` | Delete booking |
+| POST | `/api/webhooks/gohighlevel` | GHL payment webhook — confirms pending booking by email match |
 
 ## MongoDB Schema (Booking)
 
 | Field | Type | Notes |
 |-------|------|-------|
+| bookingId | String | unique, human-readable (BK-YYYYMMDD-NNN) |
 | guestName | String | required |
 | contactNumber | String | required |
 | email | String | required, lowercase |
@@ -95,6 +113,8 @@ CLIENT_URL=http://localhost:5173
 | amount | Number | required |
 | paymentType | String | enum: `downpayment` / `full` |
 | specialRequest | String | optional |
+| status | String | enum: `pending` / `confirmed` / `expired`, default: `confirmed` |
+| expiresAt | Date | TTL field — pending bookings auto-delete after 30 min |
 
 ## Tour Types & Checkout Logic
 
@@ -108,6 +128,13 @@ Logic is in `client/src/utils/tourTypeHelpers.js` → `calculateCheckOut()`.
 
 ## Calendar Behavior & Design
 
+### Tour Type Filter Tabs
+- Calendar header has three pill-shaped tabs: **Day Tour** / **Night Tour** / **Overnight**
+- Default on page load is **Day Tour**
+- Selecting a tab filters the calendar to show only that tour type's bookings
+- Tabs sync two-way with the form's tour type radio buttons via `activeTourType` state in `App.jsx`
+- Fully booked dates (all 6 rooms taken for that tour type) get a light red background via `dayPropGetter`
+
 ### Color Coding
 | Tour Type | Color | Hex |
 |-----------|-------|-----|
@@ -117,6 +144,7 @@ Logic is in `client/src/utils/tourTypeHelpers.js` → `calculateCheckOut()`.
 
 ### Event Display (Privacy)
 - Calendar events show **tour type + room** (e.g. `Day Tour: Kubo A`)
+- **Pending bookings** appear with 55% opacity + dashed border (visually muted but still block the slot)
 - Clicking a booked event does **nothing** — guest details are intentionally hidden from public view
 - `BookingModal.jsx` exists but is not wired up (kept for potential future admin use)
 
@@ -150,8 +178,27 @@ Frontend checks live via `useConflictCheck` hook (debounced 500ms). Submit is bl
 1. Client fills out form
 2. Clicks **"Review Booking"** → triggers form validation
 3. If valid → `BookingConfirmModal` opens showing all details
-4. Client reviews → clicks **"Confirm & Book ✓"** → actual API call (POST/PUT)
-5. On success → toast + form resets; On error → toast + modal closes
+4. Client reviews → clicks **"Confirm & Book ✓"** → POST creates booking with `status: pending`
+5. On success → redirect to GoHighLevel payment page (GHL)
+6. After payment → GHL webhook confirms booking → success page polls and shows confirmation
+
+**For edits (PUT):** no payment redirect — booking updates directly, toast + form resets.
+
+## GoHighLevel Payment Flow
+
+```
+Client submits form → POST /api/bookings (status: pending, expiresAt: +30min)
+                    → redirect to GHL order form URL with ?email=...&bookingId=...
+                    → user pays on GHL
+                    → GHL workflow triggers "Payment Received"
+                    → GHL sends POST /api/webhooks/gohighlevel { email, payment_status: "paid" }
+                    → backend matches email to most recent pending booking
+                    → status updated to "confirmed", expiresAt cleared
+                    → io.emit('booking:updated') → all clients see confirmed booking
+                    → success page (/booking/success/:bookingId) polls until confirmed
+```
+
+**Pending booking expiry:** Unpaid bookings auto-delete after 30 minutes via MongoDB TTL index + a server-side cleanup interval (every 5 min) that also emits `booking:deleted` socket events.
 
 **Strikethrough dates in date picker:**
 - When a `tourType` is selected: dates with existing bookings of that tour type show as red strikethrough

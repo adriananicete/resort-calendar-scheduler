@@ -14,6 +14,7 @@ import {
 import { createBooking, updateBooking } from '../services/api';
 import { useConflictCheck } from '../hooks/useConflictCheck';
 import BookingConfirmModal from './BookingConfirmModal';
+import PaymentReminderModal from './PaymentReminderModal';
 
 const EMPTY_FORM = {
   guestName: '',
@@ -29,11 +30,12 @@ const EMPTY_FORM = {
   specialRequest: '',
 };
 
-export default function BookingForm({ editingBooking, onEditDone, initialDate, bookings = [] }) {
+export default function BookingForm({ editingBooking, onEditDone, initialDate, bookings = [], activeTourType, onTourTypeChange }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [checkOut, setCheckOut] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [paymentInfo, setPaymentInfo] = useState(null); // { bookingId, paymentUrl }
 
   const isEditing = !!editingBooking;
 
@@ -58,6 +60,13 @@ export default function BookingForm({ editingBooking, onEditDone, initialDate, b
       setForm((prev) => ({ ...prev, checkIn: new Date(initialDate) }));
     }
   }, [editingBooking, initialDate]);
+
+  // Sync form tour type when calendar tab changes
+  useEffect(() => {
+    if (activeTourType && activeTourType !== form.tourType) {
+      setForm((prev) => ({ ...prev, tourType: activeTourType }));
+    }
+  }, [activeTourType]);
 
   // Recalculate checkout when checkIn or tourType changes
   useEffect(() => {
@@ -102,6 +111,10 @@ export default function BookingForm({ editingBooking, onEditDone, initialDate, b
   function handleChange(e) {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+    // Sync tour type selection to calendar tabs
+    if (name === 'tourType' && onTourTypeChange) {
+      onTourTypeChange(value);
+    }
   }
 
   function handleNumberChange(e) {
@@ -143,11 +156,29 @@ export default function BookingForm({ editingBooking, onEditDone, initialDate, b
       if (isEditing) {
         await updateBooking(editingBooking._id, payload);
         toast.success('Booking updated!');
+        resetForm();
       } else {
-        await createBooking(payload);
-        toast.success('Booking confirmed!');
+        const saved = await createBooking(payload);
+
+        // Build GHL payment URL
+        const ghlUrl = import.meta.env.VITE_GHL_PAYMENT_URL;
+        if (ghlUrl) {
+          const params = new URLSearchParams({
+            email: form.email,
+            bookingId: saved.bookingId,
+          });
+          const fullUrl = `${ghlUrl}?${params.toString()}`;
+
+          // Show payment reminder modal instead of redirecting immediately
+          setShowConfirm(false);
+          setPaymentInfo({ bookingId: saved.bookingId, paymentUrl: fullUrl });
+          return; // Don't reset — user still needs to proceed to payment
+        }
+
+        // Fallback if GHL URL not configured (dev mode)
+        toast.success('Booking created! (Payment URL not configured)');
+        resetForm();
       }
-      resetForm();
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Something went wrong.';
       toast.error(msg);
@@ -437,6 +468,15 @@ export default function BookingForm({ editingBooking, onEditDone, initialDate, b
           onConfirm={handleConfirm}
           onCancel={() => setShowConfirm(false)}
           submitting={submitting}
+        />
+      )}
+
+      {/* Payment Reminder Modal — shown after booking created, before redirect */}
+      {paymentInfo && (
+        <PaymentReminderModal
+          bookingId={paymentInfo.bookingId}
+          paymentUrl={paymentInfo.paymentUrl}
+          onClose={() => setPaymentInfo(null)}
         />
       )}
     </>

@@ -21,3 +21,6 @@ export const deleteBooking = (id) =>
 
 export const checkConflict = (params) =>
   api.get('/bookings/conflict-check', { params }).then((r) => r.data);
+
+export const getBookingStatus = (bookingId) =>
+  api.get(`/bookings/status/${bookingId}`).then((r) => r.data);
