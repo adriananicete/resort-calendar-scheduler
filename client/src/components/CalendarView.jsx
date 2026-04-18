@@ -5,6 +5,9 @@ import { enUS } from 'date-fns/locale/en-US';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { CalendarDays, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { TOUR_COLORS, ROOM_UNITS, getEventStyle } from '../utils/tourTypeHelpers';
+import { Card } from './ui/card';
+import { Button } from './ui/button';
+import { cn } from '@/lib/utils';
 
 const localizer = dateFnsLocalizer({
   format,
@@ -53,13 +56,15 @@ function CustomToolbar({ label, onNavigate, onView, view, views, onNewBooking })
       {/* Mobile-only: title row with New Booking button */}
       <div className="calendar-toolbar__title-row">
         <span className="rbc-toolbar-label">{label}</span>
-        <button
+        <Button
           type="button"
+          variant="secondary"
+          size="sm"
           onClick={onNewBooking}
-          className="calendar-toolbar__new-btn"
         >
-          <Plus className="w-4 h-4" strokeWidth={2.5} /> New Booking
-        </button>
+          <Plus className="w-4 h-4" strokeWidth={2.5} />
+          New Booking
+        </Button>
       </div>
 
       {/* Nav row — always visible */}
@@ -188,17 +193,14 @@ export default function CalendarView({ bookings, onSelectSlot, onNewBooking, for
     : 580;
 
   return (
-    <div className="bg-white rounded-lg shadow-md flex flex-col">
+    <Card className="flex flex-col overflow-hidden">
       {/* Header with Tour Type Tabs */}
-      <div
-        ref={headerRef}
-        className="bg-gradient-to-r from-slate-700 to-slate-800 px-5 py-4 rounded-t-lg"
-      >
-        <h2 className="text-white font-bold text-lg flex items-center gap-2.5">
-          <CalendarDays className="w-5 h-5" strokeWidth={2.25} />
+      <div ref={headerRef} className="px-5 py-4 border-b border-border">
+        <h2 className="text-foreground font-semibold text-lg flex items-center gap-2.5">
+          <CalendarDays className="w-5 h-5 text-muted-foreground" strokeWidth={2.25} />
           Booking Calendar
         </h2>
-        <div className="flex gap-2 mt-3">
+        <div className="inline-flex gap-1 mt-3 rounded-lg bg-muted p-1">
           {TOUR_TAB_KEYS.map((key) => {
             const isActive = activeTourType === key;
             return (
@@ -206,13 +208,17 @@ export default function CalendarView({ bookings, onSelectSlot, onNewBooking, for
                 key={key}
                 type="button"
                 onClick={() => onTourTypeChange(key)}
-                className="px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all"
-                style={{
-                  backgroundColor: isActive ? TOUR_COLORS[key] : 'transparent',
-                  color: isActive ? '#fff' : 'rgba(255,255,255,0.6)',
-                  border: isActive ? 'none' : '1px solid rgba(255,255,255,0.25)',
-                }}
+                className={cn(
+                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition',
+                  isActive
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
               >
+                <span
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: TOUR_COLORS[key] }}
+                />
                 {TOUR_TAB_LABELS[key]}
               </button>
             );
@@ -252,6 +258,6 @@ export default function CalendarView({ bookings, onSelectSlot, onNewBooking, for
           }}
         />
       </div>
-    </div>
+    </Card>
   );
 }

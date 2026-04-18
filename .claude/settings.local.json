@@ -24,7 +24,9 @@
       "Bash(node utils/resetBookings.js)",
       "Bash(grep -E \"\\\\.jsx$\")",
       "Bash(xargs ls *)",
-      "Bash(npm uninstall *)"
+      "Bash(npm uninstall *)",
+      "Bash(cat components.json)",
+      "Bash(ls node_modules/@radix-ui/react-radio-group)"
     ]
   }
 }
