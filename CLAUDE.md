@@ -83,6 +83,13 @@ MONGODB_URI=mongodb://localhost:27017/resort-scheduler
 CLIENT_URL=http://localhost:5173
 GHL_PAYMENT_URL=https://your-ghl-order-form-url.com
 GHL_WEBHOOK_SECRET=your-shared-secret-here
+
+# Admin alerts — fires when a GHL "paid" webhook has no matching booking.
+# Gmail App Password required (needs 2FA on the account):
+# https://myaccount.google.com/apppasswords
+ALERT_EMAIL_USER=your.email@gmail.com
+ALERT_EMAIL_PASSWORD=your-16-char-app-password
+ALERT_EMAIL_TO=admin@example.com   # comma-separated for multiple recipients
 ```
 
 `client/.env`:
@@ -289,7 +296,7 @@ An audit on 2026-04-18 surfaced the risks below. The system is functional end-to
 | **C1** (partial) | **Ghost payment** — user pays after the pending window, booking auto-deletes, webhook finds no match, returns 200 silently. Money gone, no record, no alert. | ⚠️ **Mitigated** — `expiresAt` bumped from 30→60 min to cover slow GHL payments. **Full fix still pending:** audit log of recently-deleted pendings + webhook recovery path. |
 | ~~**C2**~~ | ~~**Double-booking race**~~ | ✅ **Fixed** — unique compound index on `{roomUnit, checkIn, checkOut}` (partial filter: status ∈ pending/confirmed) in `Booking.js`; POST + PUT catch E11000 and return 409. `syncIndexes()` runs on boot to replace the old non-unique index. |
 | ~~**C3**~~ | ~~**Webhook auth bypass**~~ | ✅ **Fixed** — startup guard in `server/server.js` refuses to boot in production if `GHL_WEBHOOK_SECRET` is unset; webhook handler requires the secret unconditionally. |
-| **H1** | **No admin alert on unmatched webhook** — every ghost payment is silent. `console.warn` only. | Wire email/SMS alert (Resend / Nodemailer) to fire when `matched: false` + `payment_status: "paid"`. |
+| ~~**H1**~~ | ~~**No admin alert on unmatched webhook**~~ | ✅ **Fixed** — Nodemailer + Gmail SMTP sends an email to `ALERT_EMAIL_TO` whenever `payment_status: "paid"` arrives but no booking matches. Redacts `secret` before emailing. Fire-and-forget (webhook still returns 200 even if email fails). |
 
 ### High — Before Marketing Push (Phase B)
 
@@ -315,7 +322,6 @@ An audit on 2026-04-18 surfaced the risks below. The system is functional end-to
 
 | Risk | File | Lines |
 |------|------|-------|
-| C1, H1 | `server/routes/webhooks.js` | 34-58 |
 | C1 | `server/routes/bookings.js` | 71 (expiresAt) |
 | H2 | `client/src/components/PaymentReminderModal.jsx` | 17-75 |
 | H4 | `server/routes/webhooks.js` | 23, 28, 48 |
@@ -323,7 +329,7 @@ An audit on 2026-04-18 surfaced the risks below. The system is functional end-to
 
 ### Recommended Order
 
-**Phase A:** ~~C3~~ ✅ → ~~C2~~ ✅ → ~~C1 partial~~ ⚠️ → H1. **Phase B:** H2 → H4 → H5 → H3 (H3 needs GHL admin coord). **Phase C:** as surfaced by real usage. **C1 full fix (audit log + recovery)** remains in Phase C.
+**Phase A:** ~~C3~~ ✅ → ~~C2~~ ✅ → ~~C1 partial~~ ⚠️ → ~~H1~~ ✅ — **Phase A complete.** **Phase B:** H2 → H4 → H5 → H3 (H3 needs GHL admin coord). **Phase C:** as surfaced by real usage. **C1 full fix (audit log + recovery)** remains in Phase C.
 
 ---
 
