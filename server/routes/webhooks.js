@@ -16,22 +16,36 @@ router.post('/gohighlevel', async (req, res) => {
       }
     }
 
-    const { email, payment_status } = req.body;
+    const { email, payment_status, bookingId } = req.body;
 
-    if (!email || payment_status !== 'paid') {
+    if (payment_status !== 'paid') {
       // Return 200 to prevent GHL retries — just log and ignore
-      console.warn('Webhook ignored: missing email or status not paid', req.body);
+      console.warn('Webhook ignored: status not paid', req.body);
       return res.json({ received: true, matched: false });
     }
 
-    // Find the most recent pending booking for this email
-    const booking = await Booking.findOne({
-      email: email.toLowerCase().trim(),
-      status: 'pending',
-    }).sort({ createdAt: -1 });
+    if (!bookingId && !email) {
+      console.warn('Webhook ignored: no bookingId or email', req.body);
+      return res.json({ received: true, matched: false });
+    }
+
+    // Prefer bookingId (system-generated, typo-proof); fall back to email
+    let booking = null;
+    if (bookingId) {
+      booking = await Booking.findOne({
+        bookingId: String(bookingId).trim(),
+        status: 'pending',
+      });
+    }
+    if (!booking && email) {
+      booking = await Booking.findOne({
+        email: String(email).toLowerCase().trim(),
+        status: 'pending',
+      }).sort({ createdAt: -1 });
+    }
 
     if (!booking) {
-      console.warn(`Webhook: no pending booking found for ${email}`);
+      console.warn(`Webhook: no pending booking for bookingId=${bookingId}, email=${email}`);
       return res.json({ received: true, matched: false });
     }
 
