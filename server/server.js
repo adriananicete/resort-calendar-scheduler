@@ -83,8 +83,11 @@ function startPendingCleanup() {
 
 mongoose
   .connect(process.env.MONGODB_URI)
-  .then(() => {
+  .then(async () => {
     console.log('MongoDB connected');
+    // Reconcile indexes with the schema — required when promoting the
+    // {roomUnit, checkIn, checkOut} index from non-unique to unique.
+    await Booking.syncIndexes();
     startPendingCleanup();
     httpServer.listen(process.env.PORT, () =>
       console.log(`Server running on port ${process.env.PORT}`)
