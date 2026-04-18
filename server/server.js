@@ -10,6 +10,18 @@ import Booking from './models/Booking.js';
 
 dotenv.config();
 
+// Fail fast if webhook secret is missing in production; warn loudly in dev.
+// Prevents an unauthenticated webhook endpoint from silently accepting any payload.
+if (!process.env.GHL_WEBHOOK_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('FATAL: GHL_WEBHOOK_SECRET is required in production.');
+    process.exit(1);
+  }
+  console.warn(
+    '\u26a0\ufe0f  GHL_WEBHOOK_SECRET is not set. Webhook will reject all requests with 401.'
+  );
+}
+
 // Support comma-separated origins: e.g. "https://app.vercel.app,http://localhost:5173"
 const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
   .split(',')
