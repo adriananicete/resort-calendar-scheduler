@@ -68,7 +68,7 @@ router.post(
       }
 
       const bookingId = await generateBookingId();
-      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 60 minutes
 
       const booking = new Booking({
         ...req.body,

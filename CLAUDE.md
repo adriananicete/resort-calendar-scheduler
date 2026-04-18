@@ -122,7 +122,7 @@ VITE_GHL_PAYMENT_URL=https://your-ghl-order-form-url.com
 | paymentType | String | enum: `downpayment` / `full` |
 | specialRequest | String | optional |
 | status | String | enum: `pending` / `confirmed` / `expired`, default: `confirmed` |
-| expiresAt | Date | TTL field — pending bookings auto-delete after 30 min |
+| expiresAt | Date | TTL field — pending bookings auto-delete after 60 min |
 
 ## Tour Types & Checkout Logic
 
@@ -266,7 +266,7 @@ Client submits form → POST /api/bookings (status: pending, expiresAt: +30min)
                     → success page (/booking/success/:bookingId) polls until confirmed
 ```
 
-**Why prefill + bookingId match?** Re-typing the email on GHL is a silent-failure risk — a typo makes the webhook unable to find the pending booking, so the reservation expires after 30 min with no signal to client or host. Prefilling removes the typo vector, and matching on the system-generated `bookingId` eliminates it entirely once GHL is configured to pass that field through.
+**Why prefill + bookingId match?** Re-typing the email on GHL is a silent-failure risk — a typo makes the webhook unable to find the pending booking, so the reservation expires after 60 min with no signal to client or host. Prefilling removes the typo vector, and matching on the system-generated `bookingId` eliminates it entirely once GHL is configured to pass that field through.
 
 **GHL Form Setup (to configure later on the GHL side):**
 - Ensure the GHL order-form field keys are lowercase exact: `first_name`, `last_name`, `email`, `phone`. These are GHL's standard URL-prefill keys.
@@ -276,7 +276,7 @@ Client submits form → POST /api/bookings (status: pending, expiresAt: +30min)
 
 **Name splitting:** The form collects a single `guestName`; client-side `splitGuestName()` in `BookingForm.jsx` splits on the **first space** so compound surnames stay intact (e.g. `Juan Dela Cruz` → `first_name=Juan`, `last_name=Dela Cruz`). A single-token name (e.g. `Madonna`) yields `last_name=""`.
 
-**Pending booking expiry:** Unpaid bookings auto-delete after 30 minutes via MongoDB TTL index + a server-side cleanup interval (every 5 min) that also emits `booking:deleted` socket events.
+**Pending booking expiry:** Unpaid bookings auto-delete after 60 minutes via MongoDB TTL index + a server-side cleanup interval (every 5 min) that also emits `booking:deleted` socket events.
 
 ## Known Risks / Pre-Launch Backlog
 
@@ -286,7 +286,7 @@ An audit on 2026-04-18 surfaced the risks below. The system is functional end-to
 
 | # | Risk | Fix direction |
 |---|------|---------------|
-| **C1** | **Ghost payment** — user pays after the 30-min pending window, booking auto-deletes, webhook finds no match, returns 200 silently. Money gone, no record, no alert. | Bump `expiresAt` from 30→60 min as quick mitigation; full recovery path needs an audit log of recently-deleted pendings. |
+| **C1** (partial) | **Ghost payment** — user pays after the pending window, booking auto-deletes, webhook finds no match, returns 200 silently. Money gone, no record, no alert. | ⚠️ **Mitigated** — `expiresAt` bumped from 30→60 min to cover slow GHL payments. **Full fix still pending:** audit log of recently-deleted pendings + webhook recovery path. |
 | ~~**C2**~~ | ~~**Double-booking race**~~ | ✅ **Fixed** — unique compound index on `{roomUnit, checkIn, checkOut}` (partial filter: status ∈ pending/confirmed) in `Booking.js`; POST + PUT catch E11000 and return 409. `syncIndexes()` runs on boot to replace the old non-unique index. |
 | ~~**C3**~~ | ~~**Webhook auth bypass**~~ | ✅ **Fixed** — startup guard in `server/server.js` refuses to boot in production if `GHL_WEBHOOK_SECRET` is unset; webhook handler requires the secret unconditionally. |
 | **H1** | **No admin alert on unmatched webhook** — every ghost payment is silent. `console.warn` only. | Wire email/SMS alert (Resend / Nodemailer) to fire when `matched: false` + `payment_status: "paid"`. |
@@ -295,7 +295,7 @@ An audit on 2026-04-18 surfaced the risks below. The system is functional end-to
 
 | # | Risk | Fix direction |
 |---|------|---------------|
-| **H2** | **No cancel button** in `PaymentReminderModal` → abandoned bookings hold slots 30 min. | Add Cancel button that calls `DELETE /api/bookings/:id` + emits `booking:deleted`. |
+| **H2** | **No cancel button** in `PaymentReminderModal` → abandoned bookings hold slots 60 min. | Add Cancel button that calls `DELETE /api/bookings/:id` + emits `booking:deleted`. |
 | **H3** | **Amount URL param is client-spoofable** — user can edit URL before GHL submit. | GHL-side: lock product price (server-configured), not URL-driven. Our-side: webhook verifies amount matches booking. |
 | **H4** | `console.warn(req.body)` **leaks the webhook secret** in logs. | Log only safe fields: `{bookingId, email, payment_status}`. Redact three warn sites. |
 | **H5** | `generateBookingId` race → two concurrent POSTs compute same seq → E11000 → 500 error to second user. | Catch E11000 in POST handler; retry up to 3 times. |
@@ -323,7 +323,7 @@ An audit on 2026-04-18 surfaced the risks below. The system is functional end-to
 
 ### Recommended Order
 
-**Phase A:** ~~C3~~ ✅ → ~~C2~~ ✅ → C1 partial → H1. **Phase B:** H2 → H4 → H5 → H3 (H3 needs GHL admin coord). **Phase C:** as surfaced by real usage.
+**Phase A:** ~~C3~~ ✅ → ~~C2~~ ✅ → ~~C1 partial~~ ⚠️ → H1. **Phase B:** H2 → H4 → H5 → H3 (H3 needs GHL admin coord). **Phase C:** as surfaced by real usage. **C1 full fix (audit log + recovery)** remains in Phase C.
 
 ---
 
