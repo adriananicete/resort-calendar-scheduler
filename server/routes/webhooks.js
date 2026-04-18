@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import Booking from '../models/Booking.js';
+import { sendUnmatchedPaymentAlert } from '../utils/sendAdminAlert.js';
 
 const router = Router();
 
@@ -30,6 +31,8 @@ router.post('/gohighlevel', async (req, res) => {
 
     if (!bookingId && !email) {
       console.warn('Webhook ignored: no bookingId or email', req.body);
+      // Fire-and-forget admin alert — paid webhook with no way to identify booking.
+      sendUnmatchedPaymentAlert({ payload: req.body });
       return res.json({ received: true, matched: false });
     }
 
@@ -50,6 +53,8 @@ router.post('/gohighlevel', async (req, res) => {
 
     if (!booking) {
       console.warn(`Webhook: no pending booking for bookingId=${bookingId}, email=${email}`);
+      // Main ghost-payment path: paid webhook arrived, search ran, no match.
+      sendUnmatchedPaymentAlert({ payload: req.body });
       return res.json({ received: true, matched: false });
     }
 
