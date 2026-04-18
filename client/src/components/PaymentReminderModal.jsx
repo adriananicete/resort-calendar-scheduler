@@ -42,7 +42,7 @@ export default function PaymentReminderModal({ bookingId, paymentUrl, onClose })
           <div className="bg-amber-50 border border-amber-200 rounded-md p-4 flex items-center gap-3">
             <Clock className="w-8 h-8 text-amber-600 flex-shrink-0" strokeWidth={2} />
             <div>
-              <p className="text-amber-900 font-semibold text-lg leading-none">30 minutes</p>
+              <p className="text-amber-900 font-semibold text-lg leading-none">60 minutes</p>
               <p className="text-amber-800 text-xs mt-1">to complete your payment</p>
             </div>
           </div>
@@ -55,7 +55,7 @@ export default function PaymentReminderModal({ bookingId, paymentUrl, onClose })
             </p>
             <p>
               Please complete the payment within{' '}
-              <span className="font-semibold text-destructive">30 minutes</span>. If payment is not
+              <span className="font-semibold text-destructive">60 minutes</span>. If payment is not
               received in time, your reservation will be{' '}
               <span className="font-semibold text-destructive">automatically cancelled</span> and the
               date will become available for other guests.
