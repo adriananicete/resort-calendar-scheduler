@@ -252,17 +252,84 @@ Frontend checks live via `useConflictCheck` hook (debounced 500ms). The hook rec
 
 ```
 Client submits form → POST /api/bookings (status: pending, expiresAt: +30min)
-                    → redirect to GHL order form URL with ?email=...&bookingId=...
-                    → user pays on GHL
+                    → redirect to GHL order form URL with prefill params:
+                      ?first_name=...&last_name=...&email=...&phone=...
+                      &amount=...&bookingId=...
+                    → GHL form auto-fills standard fields; client reviews and pays
                     → GHL workflow triggers "Payment Received"
-                    → GHL sends POST /api/webhooks/gohighlevel { email, payment_status: "paid" }
-                    → backend matches email to most recent pending booking
+                    → GHL sends POST /api/webhooks/gohighlevel
+                      { bookingId, email, payment_status: "paid" }
+                    → backend matches by bookingId first (typo-proof);
+                      falls back to email if bookingId missing or no match
                     → status updated to "confirmed", expiresAt cleared
                     → io.emit('booking:updated') → all clients see confirmed booking
                     → success page (/booking/success/:bookingId) polls until confirmed
 ```
 
+**Why prefill + bookingId match?** Re-typing the email on GHL is a silent-failure risk — a typo makes the webhook unable to find the pending booking, so the reservation expires after 30 min with no signal to client or host. Prefilling removes the typo vector, and matching on the system-generated `bookingId` eliminates it entirely once GHL is configured to pass that field through.
+
+**GHL Form Setup (to configure later on the GHL side):**
+- Ensure the GHL order-form field keys are lowercase exact: `first_name`, `last_name`, `email`, `phone`. These are GHL's standard URL-prefill keys.
+- Add a **hidden custom field** named `bookingId` to the form so the param flows into the submission.
+- In the "Payment Received" workflow webhook, include `bookingId` in the POST body alongside `email` and `payment_status`. Backend prefers `bookingId` but still accepts email-only payloads for backward compatibility.
+- (Optional, defense-in-depth) Mark the email field read-only on the GHL form so clients cannot alter the prefilled value.
+
+**Name splitting:** The form collects a single `guestName`; client-side `splitGuestName()` in `BookingForm.jsx` splits on the **first space** so compound surnames stay intact (e.g. `Juan Dela Cruz` → `first_name=Juan`, `last_name=Dela Cruz`). A single-token name (e.g. `Madonna`) yields `last_name=""`.
+
 **Pending booking expiry:** Unpaid bookings auto-delete after 30 minutes via MongoDB TTL index + a server-side cleanup interval (every 5 min) that also emits `booking:deleted` socket events.
+
+## Known Risks / Pre-Launch Backlog
+
+An audit on 2026-04-18 surfaced the risks below. The system is functional end-to-end, but these items must be addressed before heavy production traffic. **Not yet implemented — this is the working backlog.** Each item lands as its own branch → commit → push → PR → merge cycle (no bundling).
+
+### Critical — Pre-Launch (Phase A)
+
+| # | Risk | Fix direction |
+|---|------|---------------|
+| **C1** | **Ghost payment** — user pays after the 30-min pending window, booking auto-deletes, webhook finds no match, returns 200 silently. Money gone, no record, no alert. | Bump `expiresAt` from 30→60 min as quick mitigation; full recovery path needs an audit log of recently-deleted pendings. |
+| **C2** | **Double-booking race** — two concurrent POSTs for the same room both pass conflict check (no row lock) and both save. | Add unique compound index on `{roomUnit, checkIn, checkOut}` with partial filter `status !== 'expired'`; catch E11000 and return 409. |
+| **C3** | **Webhook auth bypass** — if `GHL_WEBHOOK_SECRET` env var is unset, the webhook accepts any POST unchallenged. | Fail fast at startup in production; require secret unconditionally in the webhook handler. |
+| **H1** | **No admin alert on unmatched webhook** — every ghost payment is silent. `console.warn` only. | Wire email/SMS alert (Resend / Nodemailer) to fire when `matched: false` + `payment_status: "paid"`. |
+
+### High — Before Marketing Push (Phase B)
+
+| # | Risk | Fix direction |
+|---|------|---------------|
+| **H2** | **No cancel button** in `PaymentReminderModal` → abandoned bookings hold slots 30 min. | Add Cancel button that calls `DELETE /api/bookings/:id` + emits `booking:deleted`. |
+| **H3** | **Amount URL param is client-spoofable** — user can edit URL before GHL submit. | GHL-side: lock product price (server-configured), not URL-driven. Our-side: webhook verifies amount matches booking. |
+| **H4** | `console.warn(req.body)` **leaks the webhook secret** in logs. | Log only safe fields: `{bookingId, email, payment_status}`. Redact three warn sites. |
+| **H5** | `generateBookingId` race → two concurrent POSTs compute same seq → E11000 → 500 error to second user. | Catch E11000 in POST handler; retry up to 3 times. |
+
+### Medium / Low — Phase C (Opportunistic)
+
+- **M1** GHL field rename silently breaks prefill — document contract; add pre-launch check.
+- **M2** `PaymentReminderModal` UX trap — resolved by H2.
+- **M3** Success page polling conflates 404 with network blip — distinguish error types.
+- **M4** Same-email multiple pendings → fallback may confirm wrong one — resolved once GHL sends `bookingId` consistently.
+- **M5** Render cold-start (30s) — non-issue in practice; documented for completeness.
+- **L1** `splitGuestName` edge cases (double spaces, emoji) — cosmetic.
+- **L2** Schema defaults — `status` default should be `'pending'`; unused `'expired'` enum value.
+- **L3** Phone not normalized before prefill — strip non-digits, normalize to `+63...`.
+
+### Critical Files by Risk
+
+| Risk | File | Lines |
+|------|------|-------|
+| C1, H1 | `server/routes/webhooks.js` | 34-58 |
+| C1 | `server/routes/bookings.js` | 71 (expiresAt) |
+| C2 | `server/models/Booking.js` | 84 (compound index → make unique) |
+| C2 | `server/routes/bookings.js` | 79-82 (catch E11000) |
+| C3 | `server/server.js` | 72-84 (startup guard) |
+| C3 | `server/routes/webhooks.js` | 10-17 (flip logic) |
+| H2 | `client/src/components/PaymentReminderModal.jsx` | 17-75 |
+| H4 | `server/routes/webhooks.js` | 23, 28, 48 |
+| H5 | `server/utils/generateBookingId.js`, `server/routes/bookings.js` | 7-29, 79-85 |
+
+### Recommended Order
+
+**Phase A:** C3 → C2 → C1 partial → H1. **Phase B:** H2 → H4 → H5 → H3 (H3 needs GHL admin coord). **Phase C:** as surfaced by real usage.
+
+---
 
 **Strikethrough dates in date picker:**
 - When a `tourType` is selected: dates with existing bookings of that tour type show as red strikethrough

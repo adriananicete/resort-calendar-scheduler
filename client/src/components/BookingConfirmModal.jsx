@@ -11,14 +11,12 @@ import { Button } from './ui/button';
 export default function BookingConfirmModal({ booking, checkOut, onConfirm, onCancel, submitting }) {
   if (!booking) return null;
 
-  const tourColor = TOUR_COLORS[booking.tourType] || '#6B7280';
+  const tourColor = TOUR_COLORS[booking.tourType] || 'hsl(var(--border))';
 
   const Row = ({ label, value }) => (
     <div className="flex justify-between items-start py-2 border-b border-border/60 last:border-0 gap-4">
-      <span className="text-xs text-muted-foreground uppercase tracking-wide font-semibold flex-shrink-0">
-        {label}
-      </span>
-      <span className="text-sm text-foreground font-medium text-right">{value || '—'}</span>
+      <span className="text-sm text-muted-foreground font-medium flex-shrink-0">{label}</span>
+      <span className="text-sm text-foreground text-right">{value || '—'}</span>
     </div>
   );
 
@@ -26,13 +24,16 @@ export default function BookingConfirmModal({ booking, checkOut, onConfirm, onCa
     <Dialog open onOpenChange={(v) => !v && !submitting && onCancel()}>
       <DialogContent
         showClose={false}
-        className="p-0 max-w-sm gap-0 overflow-hidden rounded-2xl sm:rounded-2xl"
+        className="p-0 max-w-sm gap-0 overflow-hidden"
       >
-        <div className="px-5 py-4" style={{ backgroundColor: tourColor }}>
-          <DialogDescription className="text-white/80 text-xs font-semibold uppercase tracking-widest">
-            Review Your Booking
+        <div
+          className="px-5 py-4 border-b border-border"
+          style={{ borderTop: `4px solid ${tourColor}` }}
+        >
+          <DialogDescription className="text-muted-foreground text-xs font-medium">
+            Review your booking
           </DialogDescription>
-          <DialogTitle className="text-white font-bold text-xl mt-0.5">
+          <DialogTitle className="text-foreground font-semibold text-lg mt-0.5">
             Please double-check your details
           </DialogTitle>
         </div>
@@ -41,7 +42,7 @@ export default function BookingConfirmModal({ booking, checkOut, onConfirm, onCa
           <Row label="Name" value={booking.guestName} />
           <Row label="Contact" value={booking.contactNumber} />
           <Row label="Email" value={booking.email} />
-          <Row label="Tour Type" value={TOUR_LABELS[booking.tourType]} />
+          <Row label="Tour type" value={TOUR_LABELS[booking.tourType]} />
           <Row label="Room" value={booking.roomUnit} />
           <Row label="Check-in" value={formatDateTime(booking.checkIn)} />
           <Row label="Check-out" value={formatDateTime(checkOut)} />
@@ -56,7 +57,7 @@ export default function BookingConfirmModal({ booking, checkOut, onConfirm, onCa
           <Row label="Amount" value={`₱${Number(booking.amount).toLocaleString()}`} />
           <Row
             label="Payment"
-            value={booking.paymentType === 'full' ? 'Full Payment' : 'Downpayment'}
+            value={booking.paymentType === 'full' ? 'Full payment' : 'Downpayment'}
           />
           {booking.specialRequest && <Row label="Request" value={booking.specialRequest} />}
         </div>
@@ -70,24 +71,23 @@ export default function BookingConfirmModal({ booking, checkOut, onConfirm, onCa
             className="flex-1"
           >
             <ArrowLeft />
-            Go Back
+            Go back
           </Button>
-          <button
+          <Button
             type="button"
             onClick={onConfirm}
             disabled={submitting}
-            className="flex-1 inline-flex items-center justify-center gap-1.5 h-10 rounded-md text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-70 disabled:pointer-events-none"
-            style={{ backgroundColor: submitting ? '#9ca3af' : tourColor }}
+            className="flex-1"
           >
             {submitting ? (
               'Submitting...'
             ) : (
               <>
                 <Check className="w-4 h-4" strokeWidth={3} />
-                Confirm &amp; Book
+                Confirm &amp; book
               </>
             )}
-          </button>
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

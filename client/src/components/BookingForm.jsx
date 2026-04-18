@@ -7,6 +7,7 @@ import { ClipboardList, Pencil, AlertTriangle } from 'lucide-react';
 import {
   ROOM_UNITS,
   TOUR_LABELS,
+  TOUR_COLORS,
   calculateCheckIn,
   calculateCheckOut,
   formatDateTime,
@@ -17,6 +18,32 @@ import { createBooking, updateBooking } from '../services/api';
 import { useConflictCheck } from '../hooks/useConflictCheck';
 import BookingConfirmModal from './BookingConfirmModal';
 import PaymentReminderModal from './PaymentReminderModal';
+import { Card, CardHeader, CardTitle, CardDescription } from './ui/card';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Textarea } from './ui/textarea';
+import { Alert, AlertTitle, AlertDescription } from './ui/alert';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from './ui/select';
+import { cn } from '@/lib/utils';
+
+function splitGuestName(fullName) {
+  const trimmed = (fullName || '').trim();
+  if (!trimmed) return { first_name: '', last_name: '' };
+  const firstSpace = trimmed.indexOf(' ');
+  if (firstSpace === -1) return { first_name: trimmed, last_name: '' };
+  return {
+    first_name: trimmed.slice(0, firstSpace),
+    last_name: trimmed.slice(firstSpace + 1).trim(),
+  };
+}
 
 const EMPTY_FORM = {
   guestName: '',
@@ -171,8 +198,13 @@ export default function BookingForm({ editingBooking, onEditDone, initialDate, b
         // Build GHL payment URL
         const ghlUrl = import.meta.env.VITE_GHL_PAYMENT_URL;
         if (ghlUrl) {
+          const { first_name, last_name } = splitGuestName(form.guestName);
           const params = new URLSearchParams({
+            first_name,
+            last_name,
             email: form.email,
+            phone: form.contactNumber,
+            amount: String(form.amount),
             bookingId: saved.bookingId,
           });
           const fullUrl = `${ghlUrl}?${params.toString()}`;
@@ -196,134 +228,131 @@ export default function BookingForm({ editingBooking, onEditDone, initialDate, b
     }
   }
 
-  const inputCls =
-    'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition';
-  const labelCls = 'block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide';
-
   return (
     <>
-      <div className="bg-white rounded-2xl shadow-md overflow-hidden">
-        {/* Form Header */}
-        <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-5 py-4">
-          <div className="flex items-center gap-2.5">
+      <Card className="overflow-hidden">
+        <CardHeader className="px-5 py-4 border-b border-border space-y-1">
+          <CardTitle className="text-lg flex items-center gap-2.5">
             {isEditing
-              ? <Pencil className="w-5 h-5 text-white" strokeWidth={2.25} />
-              : <ClipboardList className="w-5 h-5 text-white" strokeWidth={2.25} />}
-            <h2 className="text-white font-bold text-lg">
-              {isEditing ? 'Edit Booking' : 'New Booking'}
-            </h2>
-          </div>
-          <p className="text-slate-300 text-xs mt-0.5">
+              ? <Pencil className="w-5 h-5 text-muted-foreground" strokeWidth={2.25} />
+              : <ClipboardList className="w-5 h-5 text-muted-foreground" strokeWidth={2.25} />}
+            {isEditing ? 'Edit booking' : 'New booking'}
+          </CardTitle>
+          <CardDescription>
             {isEditing ? 'Update reservation details below' : 'Fill in the reservation details below'}
-          </p>
-        </div>
+          </CardDescription>
+        </CardHeader>
 
-        {/* Conflict Warning — no names shown for privacy */}
+        {/* Conflict warning — no guest names for privacy */}
         {hasConflict && (
-          <div className="mx-4 mt-4 bg-red-50 border border-red-300 rounded-lg p-3 flex items-start gap-2.5">
-            <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" strokeWidth={2.25} />
-            <div>
-              <p className="text-red-700 font-semibold text-sm">This date is already booked!</p>
-              {conflicts.map((c, i) => (
-                <p key={i} className="text-red-600 text-xs mt-0.5">
-                  {c.roomUnit} is not available on the selected date and time.
-                </p>
-              ))}
-              <p className="text-red-500 text-xs mt-1">Please choose a different date or room.</p>
-            </div>
+          <div className="px-5 pt-4">
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>This date is already booked</AlertTitle>
+              <AlertDescription>
+                {conflicts.map((c, i) => (
+                  <p key={i}>{c.roomUnit} is not available on the selected date and time.</p>
+                ))}
+                <p className="mt-1 opacity-80">Please choose a different date or room.</p>
+              </AlertDescription>
+            </Alert>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
-          {/* Guest Info */}
-          <div className="grid grid-cols-1 gap-3">
-            <div>
-              <label className={labelCls}>Full Name *</label>
-              <input
-                name="guestName"
-                value={form.guestName}
+          {/* Guest info */}
+          <div className="space-y-1.5">
+            <Label htmlFor="guestName">Full name *</Label>
+            <Input
+              id="guestName"
+              name="guestName"
+              value={form.guestName}
+              onChange={handleChange}
+              required
+              placeholder="Juan Dela Cruz"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="contactNumber">Contact no. *</Label>
+              <Input
+                id="contactNumber"
+                name="contactNumber"
+                value={form.contactNumber}
                 onChange={handleChange}
                 required
-                placeholder="Juan Dela Cruz"
-                className={inputCls}
+                placeholder="09XXXXXXXXX"
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={labelCls}>Contact No. *</label>
-                <input
-                  name="contactNumber"
-                  value={form.contactNumber}
-                  onChange={handleChange}
-                  required
-                  placeholder="09XXXXXXXXX"
-                  className={inputCls}
-                />
-              </div>
-              <div>
-                <label className={labelCls}>Email *</label>
-                <input
-                  name="email"
-                  type="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  required
-                  placeholder="email@example.com"
-                  className={inputCls}
-                />
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                value={form.email}
+                onChange={handleChange}
+                required
+                placeholder="email@example.com"
+              />
             </div>
           </div>
 
-          {/* Tour Type */}
-          <div>
-            <label className={labelCls}>Tour Type *</label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          {/* Tour type */}
+          <div className="space-y-1.5">
+            <Label>Tour type *</Label>
+            <RadioGroup
+              value={form.tourType}
+              onValueChange={(v) => {
+                handleChange({ target: { name: 'tourType', value: v } });
+              }}
+              className="grid grid-cols-1 sm:grid-cols-3 gap-2"
+            >
               {Object.entries(TOUR_LABELS).map(([key, label]) => {
-                const colors = {
-                  day:       'border-amber-400 bg-amber-50 text-amber-800',
-                  night:     'border-indigo-400 bg-indigo-50 text-indigo-800',
-                  overnight: 'border-purple-400 bg-purple-50 text-purple-800',
-                };
                 const selected = form.tourType === key;
                 return (
-                  <label
+                  <Label
                     key={key}
-                    className={`flex items-center gap-2 p-2.5 rounded-lg border-2 cursor-pointer transition text-xs font-medium
-                      ${selected ? colors[key] : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300'}`}
+                    htmlFor={`tour-${key}`}
+                    className={cn(
+                      'flex items-center gap-2 p-2.5 rounded-md border cursor-pointer transition text-xs font-medium',
+                      selected
+                        ? 'bg-accent text-foreground'
+                        : 'text-muted-foreground hover:bg-accent/50',
+                    )}
+                    style={
+                      selected
+                        ? { borderLeft: `4px solid ${TOUR_COLORS[key]}` }
+                        : undefined
+                    }
                   >
-                    <input
-                      type="radio"
-                      name="tourType"
-                      value={key}
-                      checked={selected}
-                      onChange={handleChange}
-                      className="sr-only"
-                    />
-                    <span className="w-3 h-3 rounded-full border-2 flex-shrink-0"
+                    <RadioGroupItem value={key} id={`tour-${key}`} className="sr-only" />
+                    <span
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                       style={{
-                        borderColor: selected ? 'currentColor' : '#d1d5db',
-                        backgroundColor: selected ? 'currentColor' : 'transparent',
+                        backgroundColor: selected ? TOUR_COLORS[key] : 'transparent',
+                        border: selected ? 'none' : '2px solid hsl(var(--border))',
                       }}
                     />
                     {label}
-                  </label>
+                  </Label>
                 );
               })}
-            </div>
+            </RadioGroup>
           </div>
 
           {/* Dates */}
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Check-in Date *</label>
+            <div className="space-y-1.5">
+              <Label htmlFor="checkIn">Check-in date *</Label>
               <DatePicker
+                id="checkIn"
                 selected={form.checkIn}
                 onChange={(date) => setForm((prev) => ({ ...prev, checkIn: date }))}
                 dateFormat="MMM d, yyyy"
                 placeholderText="Select date"
                 minDate={new Date()}
-                className={inputCls}
+                customInput={<Input />}
                 wrapperClassName="w-full"
                 required
                 dayClassName={(date) =>
@@ -333,145 +362,152 @@ export default function BookingForm({ editingBooking, onEditDone, initialDate, b
                 }
               />
             </div>
-            <div>
-              <label className={labelCls}>Check-out Date</label>
-              <div className={`${inputCls} bg-gray-50 text-gray-500 cursor-not-allowed`}>
-                {checkOut ? formatDateTime(checkOut).split(',').slice(0, 2).join(',') : 'Auto-calculated'}
-              </div>
+            <div className="space-y-1.5">
+              <Label>Check-out date</Label>
+              <Input
+                readOnly
+                disabled
+                value={checkOut ? formatDateTime(checkOut).split(',').slice(0, 2).join(',') : ''}
+                placeholder="Auto-calculated"
+              />
             </div>
           </div>
 
-          {/* Room + Pax */}
-          <div className="grid grid-cols-1 gap-3">
-            <div>
-              <label className={labelCls}>Room / Unit *</label>
-              <select
-                name="roomUnit"
-                value={form.roomUnit}
-                onChange={handleChange}
-                required
-                className={inputCls}
-              >
-                <option value="">— Select Room —</option>
+          {/* Room */}
+          <div className="space-y-1.5">
+            <Label htmlFor="roomUnit">Room / unit *</Label>
+            <Select
+              value={form.roomUnit}
+              onValueChange={(v) => handleChange({ target: { name: 'roomUnit', value: v } })}
+            >
+              <SelectTrigger id="roomUnit">
+                <SelectValue placeholder="— Select Room —" />
+              </SelectTrigger>
+              <SelectContent>
                 {ROOM_UNITS.map((r) => (
-                  <option key={r.name} value={r.name}>
+                  <SelectItem key={r.name} value={r.name}>
                     {r.name} — {formatPeso(r.price)}
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Pax */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="adults">Adults *</Label>
+              <Input
+                id="adults"
+                name="adults"
+                type="number"
+                min="1"
+                value={form.adults}
+                onChange={handleNumberChange}
+                required
+              />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={labelCls}>Adults *</label>
-                <input
-                  name="adults"
-                  type="number"
-                  min="1"
-                  value={form.adults}
-                  onChange={handleNumberChange}
-                  required
-                  className={inputCls}
-                />
-              </div>
-              <div>
-                <label className={labelCls}>Children</label>
-                <input
-                  name="children"
-                  type="number"
-                  min="0"
-                  value={form.children}
-                  onChange={handleNumberChange}
-                  className={inputCls}
-                />
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="children">Children</Label>
+              <Input
+                id="children"
+                name="children"
+                type="number"
+                min="0"
+                value={form.children}
+                onChange={handleNumberChange}
+              />
             </div>
           </div>
 
           {/* Payment */}
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Amount (₱) *</label>
-              <input
+            <div className="space-y-1.5">
+              <Label htmlFor="amount">Amount (₱) *</Label>
+              <Input
+                id="amount"
                 name="amount"
                 type="text"
                 value={form.amount === '' ? '' : formatPeso(form.amount)}
                 readOnly
                 disabled
                 placeholder="Select room & payment"
-                className={`${inputCls} bg-gray-50 text-gray-700 font-semibold cursor-not-allowed`}
                 title={form.paymentType === 'full' ? 'Full payment — 100% of room price' : 'Downpayment — 50% of room price'}
+                className="font-semibold"
               />
             </div>
-            <div>
-              <label className={labelCls}>Payment Type *</label>
-              <div className="flex gap-2 mt-1">
+            <div className="space-y-1.5">
+              <Label>Payment type *</Label>
+              <RadioGroup
+                value={form.paymentType}
+                onValueChange={(v) => handleChange({ target: { name: 'paymentType', value: v } })}
+                className="grid grid-cols-2 gap-2"
+              >
                 {[
                   { value: 'downpayment', label: 'Down' },
                   { value: 'full', label: 'Full' },
-                ].map(({ value, label }) => (
-                  <label
-                    key={value}
-                    className={`flex-1 text-center py-2 rounded-lg border-2 text-xs font-semibold cursor-pointer transition
-                      ${form.paymentType === value
-                        ? 'border-green-500 bg-green-50 text-green-700'
-                        : 'border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300'}`}
-                  >
-                    <input
-                      type="radio"
-                      name="paymentType"
-                      value={value}
-                      checked={form.paymentType === value}
-                      onChange={handleChange}
-                      className="sr-only"
-                    />
-                    {label}
-                  </label>
-                ))}
-              </div>
+                ].map(({ value, label }) => {
+                  const selected = form.paymentType === value;
+                  return (
+                    <Label
+                      key={value}
+                      htmlFor={`pay-${value}`}
+                      className={cn(
+                        'flex items-center justify-center h-10 rounded-md border cursor-pointer transition text-xs font-semibold',
+                        selected
+                          ? 'border-primary bg-primary/5 text-foreground'
+                          : 'text-muted-foreground hover:bg-accent/50',
+                      )}
+                    >
+                      <RadioGroupItem value={value} id={`pay-${value}`} className="sr-only" />
+                      {label}
+                    </Label>
+                  );
+                })}
+              </RadioGroup>
             </div>
           </div>
 
-          {/* Special Request */}
-          <div>
-            <label className={labelCls}>Special Request</label>
-            <textarea
+          {/* Special request */}
+          <div className="space-y-1.5">
+            <Label htmlFor="specialRequest">Special request</Label>
+            <Textarea
+              id="specialRequest"
               name="specialRequest"
               value={form.specialRequest}
               onChange={handleChange}
               rows={3}
               placeholder="Any special arrangements, dietary needs, etc."
-              className={`${inputCls} resize-none`}
+              className="resize-none"
             />
           </div>
 
           {/* Buttons */}
           <div className="flex gap-2 pt-1">
             {isEditing && (
-              <button
+              <Button
                 type="button"
+                variant="outline"
                 onClick={resetForm}
-                className="flex-1 py-2.5 rounded-xl border border-gray-300 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition"
+                className="flex-1"
               >
                 Cancel
-              </button>
+              </Button>
             )}
-            <button
+            <Button
               type="submit"
               disabled={submitting || hasConflict || checking}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition
-                ${submitting || hasConflict || checking
-                  ? 'bg-gray-300 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900 shadow-md'}`}
+              className="flex-1"
             >
               {checking
                 ? 'Checking...'
                 : isEditing
-                ? 'Review Changes'
-                : 'Review Booking'}
-            </button>
+                ? 'Review changes'
+                : 'Review booking'}
+            </Button>
           </div>
         </form>
-      </div>
+      </Card>
 
       {/* Confirmation Modal */}
       {showConfirm && (

@@ -26,7 +26,8 @@
       "Bash(xargs ls *)",
       "Bash(npm uninstall *)",
       "Bash(cat components.json)",
-      "Bash(ls node_modules/@radix-ui/react-radio-group)"
+      "Bash(ls node_modules/@radix-ui/react-radio-group)",
+      "WebSearch"
     ]
   }
 }
