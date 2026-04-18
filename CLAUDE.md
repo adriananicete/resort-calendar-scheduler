@@ -288,7 +288,7 @@ An audit on 2026-04-18 surfaced the risks below. The system is functional end-to
 |---|------|---------------|
 | **C1** | **Ghost payment** — user pays after the 30-min pending window, booking auto-deletes, webhook finds no match, returns 200 silently. Money gone, no record, no alert. | Bump `expiresAt` from 30→60 min as quick mitigation; full recovery path needs an audit log of recently-deleted pendings. |
 | **C2** | **Double-booking race** — two concurrent POSTs for the same room both pass conflict check (no row lock) and both save. | Add unique compound index on `{roomUnit, checkIn, checkOut}` with partial filter `status !== 'expired'`; catch E11000 and return 409. |
-| **C3** | **Webhook auth bypass** — if `GHL_WEBHOOK_SECRET` env var is unset, the webhook accepts any POST unchallenged. | Fail fast at startup in production; require secret unconditionally in the webhook handler. |
+| ~~**C3**~~ | ~~**Webhook auth bypass**~~ | ✅ **Fixed** — startup guard in `server/server.js` refuses to boot in production if `GHL_WEBHOOK_SECRET` is unset; webhook handler requires the secret unconditionally. |
 | **H1** | **No admin alert on unmatched webhook** — every ghost payment is silent. `console.warn` only. | Wire email/SMS alert (Resend / Nodemailer) to fire when `matched: false` + `payment_status: "paid"`. |
 
 ### High — Before Marketing Push (Phase B)
@@ -319,15 +319,13 @@ An audit on 2026-04-18 surfaced the risks below. The system is functional end-to
 | C1 | `server/routes/bookings.js` | 71 (expiresAt) |
 | C2 | `server/models/Booking.js` | 84 (compound index → make unique) |
 | C2 | `server/routes/bookings.js` | 79-82 (catch E11000) |
-| C3 | `server/server.js` | 72-84 (startup guard) |
-| C3 | `server/routes/webhooks.js` | 10-17 (flip logic) |
 | H2 | `client/src/components/PaymentReminderModal.jsx` | 17-75 |
 | H4 | `server/routes/webhooks.js` | 23, 28, 48 |
 | H5 | `server/utils/generateBookingId.js`, `server/routes/bookings.js` | 7-29, 79-85 |
 
 ### Recommended Order
 
-**Phase A:** C3 → C2 → C1 partial → H1. **Phase B:** H2 → H4 → H5 → H3 (H3 needs GHL admin coord). **Phase C:** as surfaced by real usage.
+**Phase A:** ~~C3~~ ✅ → C2 → C1 partial → H1. **Phase B:** H2 → H4 → H5 → H3 (H3 needs GHL admin coord). **Phase C:** as surfaced by real usage.
 
 ---
 

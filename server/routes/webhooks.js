@@ -6,14 +6,18 @@ const router = Router();
 // POST /api/webhooks/gohighlevel — payment confirmation from GoHighLevel
 router.post('/gohighlevel', async (req, res) => {
   try {
-    // Verify shared secret if configured
+    // Shared-secret auth is mandatory. If the env var is missing, reject every request
+    // rather than fall through to an open endpoint. Startup guard in server.js already
+    // refuses to boot in production without the secret.
     const secret = process.env.GHL_WEBHOOK_SECRET;
-    if (secret) {
-      const provided = req.body.secret || req.headers['x-ghl-signature'];
-      if (provided !== secret) {
-        console.warn('Webhook rejected: invalid secret');
-        return res.status(401).json({ message: 'Unauthorized' });
-      }
+    if (!secret) {
+      console.warn('Webhook rejected: GHL_WEBHOOK_SECRET not configured');
+      return res.status(401).json({ message: 'Webhook not configured' });
+    }
+    const provided = req.body.secret || req.headers['x-ghl-signature'];
+    if (provided !== secret) {
+      console.warn('Webhook rejected: invalid secret');
+      return res.status(401).json({ message: 'Unauthorized' });
     }
 
     const { email, payment_status, bookingId } = req.body;
