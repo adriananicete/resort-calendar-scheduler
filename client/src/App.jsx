@@ -1,8 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
+import { Palmtree, X } from 'lucide-react';
 import BookingForm from './components/BookingForm';
 import CalendarView from './components/CalendarView';
 import { useBookings } from './hooks/useBookings';
+import { Card } from './components/ui/card';
+import { Button } from './components/ui/button';
 
 const MOBILE_QUERY = '(max-width: 1023px)';
 const isMobileViewport = () =>
@@ -72,30 +75,30 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 to-indigo-50">
+    <div className="min-h-screen bg-muted/40">
       <Toaster
         position="top-right"
         toastOptions={{
           duration: 4000,
           style: { fontSize: '14px', borderRadius: '10px' },
-          success: { iconTheme: { primary: '#6366F1', secondary: '#fff' } },
+          success: { iconTheme: { primary: 'hsl(var(--primary))', secondary: '#fff' } },
         }}
       />
 
       {/* Top Header */}
-      <header className="bg-white border-b border-gray-200 shadow-sm">
+      <header className="bg-background border-b border-border">
         <div className="max-w-screen-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-lg font-bold shadow">
-              🌴
+            <div className="w-9 h-9 rounded-lg bg-primary text-primary-foreground flex items-center justify-center">
+              <Palmtree className="w-5 h-5" strokeWidth={2.25} />
             </div>
             <div>
-              <h1 className="text-gray-900 font-bold text-lg leading-tight">Resort Booking Scheduler</h1>
-              <p className="text-gray-400 text-xs">Manage reservations in real-time</p>
+              <h1 className="text-foreground font-semibold text-lg leading-tight">Resort Booking Scheduler</h1>
+              <p className="text-muted-foreground text-xs">Manage reservations in real-time</p>
             </div>
           </div>
-          <div className="hidden sm:flex items-center gap-2 text-xs text-gray-500">
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+          <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
             <span>Live sync active</span>
           </div>
         </div>
@@ -121,14 +124,16 @@ export default function App() {
             className="relative w-full max-w-md mx-auto lg:max-w-none lg:mx-0"
           >
             {isMobileFormOpen && (
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="icon"
                 onClick={() => setIsMobileFormOpen(false)}
                 aria-label="Close form"
-                className="lg:hidden absolute -top-3 -right-3 z-10 w-9 h-9 rounded-full bg-white shadow-lg flex items-center justify-center text-gray-700 text-xl font-bold hover:bg-gray-50"
+                className="lg:hidden absolute -top-3 -right-3 z-10 rounded-full shadow-lg"
               >
-                ×
-              </button>
+                <X className="w-4 h-4" />
+              </Button>
             )}
             <BookingForm
               editingBooking={editingBooking}
@@ -144,12 +149,12 @@ export default function App() {
         {/* Right Panel — Calendar */}
         <div className="w-full lg:flex-1">
           {loading ? (
-            <div className="bg-white rounded-2xl shadow-md flex items-center justify-center" style={{ height: formHeight || 400 }}>
+            <Card className="flex items-center justify-center" style={{ height: formHeight || 400 }}>
               <div className="text-center">
-                <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
-                <p className="text-gray-400 text-sm mt-3">Loading calendar...</p>
+                <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+                <p className="text-muted-foreground text-sm mt-3">Loading calendar...</p>
               </div>
-            </div>
+            </Card>
           ) : (
             <CalendarView
               bookings={bookings}

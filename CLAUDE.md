@@ -180,6 +180,44 @@ const [currentView, setCurrentView] = useState('month');
 ### Height Matching
 `App.jsx` uses a `ResizeObserver` on the form panel ref to measure its height, then passes `formHeight` as a prop to `CalendarView`. The calendar computes: `calHeight = formHeight - headerHeight - 32px padding`. Do not use `height: '100%'` on the Calendar component — use a fixed pixel value only.
 
+## UI Design System (shadcn/ui)
+
+### Direction
+**Clean monochrome + tour colors as accents only.** Linear/Notion/Vercel-tier neutrality. No gradient backgrounds, no colored panel fills, no colored button fills. Tour colors (amber/indigo/purple) appear only as: calendar event fills, active tour-tab ring + dot, and radio-option left-border strip (`border-l-4`).
+
+### Setup
+- Theme: **zinc** (shadcn default), path alias `@/` → `client/src/`, `cn()` helper in `client/src/lib/utils.js`.
+- Primitives in `client/src/components/ui/`: `button`, `card`, `dialog`, `input`, `label`, `radio-group`, `select`, `separator`, `textarea`, `alert`.
+- `dialog.jsx` has a custom `showClose` prop — preserve when regenerating.
+
+### Conventions
+| Concern | Rule |
+|---|---|
+| Background | `bg-muted/40` for app shell (no gradients) |
+| Surfaces | `<Card>` for form, calendar wrapper, success page, loading state |
+| Radius | `rounded-md` for inputs/buttons, `rounded-lg` for cards/dialogs (retire `rounded-xl`/`rounded-2xl` on form elements) |
+| Labels | Sentence case, `text-sm font-medium text-foreground mb-1.5` (no uppercase + tracking-wide) |
+| Primary action | `<Button>` default variant (Review Booking, Confirm & Book) |
+| Secondary action | `<Button variant="outline">` (Cancel, Go Back) |
+| Toolbar action | `<Button variant="secondary">` (New Booking) |
+| Icon-only | `<Button variant="ghost" size="icon">` (calendar arrows, close X) |
+| Errors | `<Alert variant="destructive">` for conflict warnings |
+
+### Do Not
+- **Do not swap** `react-datepicker` or `react-big-calendar`. Style DatePicker via `customInput={<Input />}`; keep `dayClassName` for `.date-already-booked`.
+- **Do not restyle `.rbc-*`** classes beyond cosmetic token swaps (scrollbar, `.rbc-today` circle, `.rbc-header` color).
+- **Do not change** `EMPTY_FORM`, `handleChange`, `handleNumberChange`, `handleSubmit`, `handleConfirm`, `resetForm`, `bookedDates`, `actualCheckIn`, or any `useEffect` in `BookingForm.jsx` when modernizing UI.
+- **Do not change** controlled `date`/`view` state or the `ResizeObserver` height-match in `App.jsx`.
+- **Do not delete** `BookingModal.jsx` (reserved for future admin use).
+- **Do not render** guest name/email in the conflict warning or calendar events — privacy invariant.
+
+### RadioGroup adapter (for components expecting `onChange` events)
+shadcn `<RadioGroup>` returns a raw string via `onValueChange`. When adapting legacy `handleChange({ target: { name, value }})` consumers, wrap:
+```jsx
+onValueChange={(v) => { handleChange({ target: { name: 'tourType', value: v }}); onTourTypeChange?.(v); }}
+```
+This preserves two-way tour-type sync between form radios and calendar tabs.
+
 ## Double Booking Logic
 
 MongoDB overlap query in `server/utils/conflictCheck.js`:

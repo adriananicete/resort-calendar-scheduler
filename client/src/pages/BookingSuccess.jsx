@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { getBookingStatus } from '../services/api';
+import { Card } from '../components/ui/card';
+import { Button } from '../components/ui/button';
 
 const MAX_POLLS = 20;
 const POLL_INTERVAL = 3000; // 3 seconds
@@ -48,17 +50,17 @@ export default function BookingSuccess() {
   }, [bookingId]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 to-indigo-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-8 text-center">
+    <div className="min-h-screen bg-muted/40 flex items-center justify-center p-4">
+      <Card className="max-w-md w-full p-8 text-center">
         {status === 'polling' && (
           <>
-            <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
-            <h2 className="text-xl font-bold text-gray-800 mt-6">Verifying Payment...</h2>
-            <p className="text-gray-500 mt-2 text-sm">
+            <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+            <h2 className="text-xl font-semibold text-foreground mt-6">Verifying Payment...</h2>
+            <p className="text-muted-foreground mt-2 text-sm">
               Please wait while we confirm your payment. This may take a moment.
             </p>
-            <p className="text-gray-400 mt-4 text-xs">
-              Booking ID: <span className="font-mono">{bookingId}</span>
+            <p className="text-muted-foreground mt-4 text-xs">
+              Booking ID: <span className="font-mono text-foreground">{bookingId}</span>
             </p>
           </>
         )}
@@ -68,22 +70,19 @@ export default function BookingSuccess() {
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
               <CheckCircle2 className="w-9 h-9 text-green-600" strokeWidth={2.25} />
             </div>
-            <h2 className="text-xl font-bold text-gray-800 mt-6">Booking Confirmed!</h2>
+            <h2 className="text-xl font-semibold text-foreground mt-6">Booking Confirmed!</h2>
             {guestName && (
-              <p className="text-gray-600 mt-2">Thank you, {guestName}!</p>
+              <p className="text-muted-foreground mt-2">Thank you, {guestName}!</p>
             )}
-            <p className="text-gray-500 mt-2 text-sm">
+            <p className="text-muted-foreground mt-2 text-sm">
               Your reservation has been confirmed. You will receive a confirmation at the email you provided.
             </p>
-            <p className="text-gray-400 mt-4 text-xs">
-              Booking ID: <span className="font-mono">{bookingId}</span>
+            <p className="text-muted-foreground mt-4 text-xs">
+              Booking ID: <span className="font-mono text-foreground">{bookingId}</span>
             </p>
-            <Link
-              to="/"
-              className="inline-block mt-6 px-6 py-2.5 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
-            >
-              Back to Calendar
-            </Link>
+            <Button asChild className="mt-6">
+              <Link to="/">Back to Calendar</Link>
+            </Button>
           </>
         )}
 
@@ -92,16 +91,13 @@ export default function BookingSuccess() {
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
               <XCircle className="w-9 h-9 text-red-600" strokeWidth={2.25} />
             </div>
-            <h2 className="text-xl font-bold text-gray-800 mt-6">Booking Expired</h2>
-            <p className="text-gray-500 mt-2 text-sm">
+            <h2 className="text-xl font-semibold text-foreground mt-6">Booking Expired</h2>
+            <p className="text-muted-foreground mt-2 text-sm">
               This booking was not confirmed in time and has expired. Please create a new booking.
             </p>
-            <Link
-              to="/"
-              className="inline-block mt-6 px-6 py-2.5 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
-            >
-              Book Again
-            </Link>
+            <Button asChild className="mt-6">
+              <Link to="/">Book Again</Link>
+            </Button>
           </>
         )}
 
@@ -110,15 +106,16 @@ export default function BookingSuccess() {
             <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
               <Clock className="w-9 h-9 text-amber-600" strokeWidth={2.25} />
             </div>
-            <h2 className="text-xl font-bold text-gray-800 mt-6">Payment Not Yet Received</h2>
-            <p className="text-gray-500 mt-2 text-sm">
+            <h2 className="text-xl font-semibold text-foreground mt-6">Payment Not Yet Received</h2>
+            <p className="text-muted-foreground mt-2 text-sm">
               We haven't received your payment confirmation yet. If you completed the payment, please wait a few minutes and check back.
             </p>
-            <p className="text-gray-400 mt-4 text-xs">
-              Booking ID: <span className="font-mono">{bookingId}</span>
+            <p className="text-muted-foreground mt-4 text-xs">
+              Booking ID: <span className="font-mono text-foreground">{bookingId}</span>
             </p>
             <div className="flex gap-3 justify-center mt-6">
-              <button
+              <Button
+                variant="outline"
                 onClick={() => {
                   pollCount.current = 0;
                   setStatus('polling');
@@ -142,20 +139,16 @@ export default function BookingSuccess() {
                     }
                   }, POLL_INTERVAL);
                 }}
-                className="px-5 py-2.5 bg-amber-500 text-white rounded-lg font-medium hover:bg-amber-600 transition-colors"
               >
                 Retry
-              </button>
-              <Link
-                to="/"
-                className="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
-              >
-                Back to Calendar
-              </Link>
+              </Button>
+              <Button asChild>
+                <Link to="/">Back to Calendar</Link>
+              </Button>
             </div>
           </>
         )}
-      </div>
+      </Card>
     </div>
   );
 }
