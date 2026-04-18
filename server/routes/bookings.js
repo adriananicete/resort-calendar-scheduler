@@ -81,6 +81,13 @@ router.post(
       req.io.emit('booking:created', saved);
       res.status(201).json(saved);
     } catch (err) {
+      // Duplicate key on the unique (roomUnit, checkIn, checkOut) index —
+      // a concurrent POST won the race. Return 409 the same way the pre-check does.
+      if (err.code === 11000) {
+        return res.status(409).json({
+          message: 'Double booking detected. This room is already reserved for the selected dates.',
+        });
+      }
       res.status(500).json({ message: err.message });
     }
   }
@@ -116,6 +123,11 @@ router.put(
       req.io.emit('booking:updated', updated);
       res.json(updated);
     } catch (err) {
+      if (err.code === 11000) {
+        return res.status(409).json({
+          message: 'Double booking detected. This room is already reserved for the selected dates.',
+        });
+      }
       res.status(500).json({ message: err.message });
     }
   }

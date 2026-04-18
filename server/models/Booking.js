@@ -80,8 +80,16 @@ const bookingSchema = new mongoose.Schema({
   },
 });
 
-// Compound index for fast conflict queries
-bookingSchema.index({ roomUnit: 1, checkIn: 1, checkOut: 1 });
+// Unique compound index — race-proof defense against double-booking.
+// Partial filter limits uniqueness to active bookings; 'expired' docs (legacy, rare)
+// are exempt so a stale record can't block a legitimate new booking.
+bookingSchema.index(
+  { roomUnit: 1, checkIn: 1, checkOut: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { status: { $in: ['pending', 'confirmed'] } },
+  }
+);
 
 // TTL index — auto-delete pending bookings after expiresAt
 bookingSchema.index(
