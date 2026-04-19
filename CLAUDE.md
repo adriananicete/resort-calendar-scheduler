@@ -16,6 +16,7 @@ Calendar-Scheduler/
 ├── server/
 │   ├── server.js             ← Express + Socket.io + MongoDB + pending cleanup interval
 │   ├── models/Booking.js     ← Mongoose schema (includes status, bookingId, expiresAt)
+│   ├── models/DeletedPending.js ← audit snapshot of expired pendings (48h TTL) for ghost-payment recovery
 │   ├── routes/bookings.js    ← CRUD routes + conflict-check + status-check endpoint
 │   ├── routes/webhooks.js    ← GoHighLevel payment webhook receiver
 │   ├── utils/conflictCheck.js← MongoDB overlap query logic (excludes expired)
@@ -283,7 +284,17 @@ Client submits form → POST /api/bookings (status: pending, expiresAt: +30min)
 
 **Name splitting:** The form collects a single `guestName`; client-side `splitGuestName()` in `BookingForm.jsx` splits on the **first space** so compound surnames stay intact (e.g. `Juan Dela Cruz` → `first_name=Juan`, `last_name=Dela Cruz`). A single-token name (e.g. `Madonna`) yields `last_name=""`.
 
-**Pending booking expiry:** Unpaid bookings auto-delete after 60 minutes via MongoDB TTL index + a server-side cleanup interval (every 5 min) that also emits `booking:deleted` socket events.
+**Pending booking expiry:** Unpaid bookings auto-delete after 60 minutes. The cleanup interval in `server.js` runs every 60 seconds and is the **only** deletion path — it first snapshots each expiring booking into the `DeletedPending` audit collection, then deletes from `bookings` with a `{status: 'pending'}` guard so a webhook that confirmed in-flight doesn't get clobbered. The old MongoDB TTL index on `bookings` was removed so every deletion is auditable.
+
+**Ghost-payment recovery (C1 full fix):** When a GHL "paid" webhook arrives and no pending booking matches, the handler runs through a recovery ladder:
+
+1. **Already-confirmed check** — if a booking with the given `bookingId` exists with `status: confirmed`, treat as an idempotent no-op (GHL webhook retry). Return 200 without alerting.
+2. **Audit lookup** — search `DeletedPending` by `originalBookingId`, then by `email`.
+3. **If audit hit + slot free** — rebuild the booking with `status: confirmed` using the original fields (including original `bookingId` for receipt continuity). Emit `booking:created`. Delete the audit record.
+4. **If audit hit + slot taken** — another booking took the slot after expiry; automatic recovery would double-book. Email admin with a contextual `reason` + audit snapshot for manual refund or reschedule.
+5. **If no audit** — true ghost payment from an unknown source. Email admin (original H1 alert).
+
+Audit records self-expire after 48h via a TTL index on `deletedAt`. The recovery path is race-safe: concurrent webhooks hit E11000 on the restored booking's unique index and fall through to an idempotent "already recovered" response.
 
 ## Known Risks / Pre-Launch Backlog
 
@@ -293,7 +304,7 @@ An audit on 2026-04-18 surfaced the risks below. The system is functional end-to
 
 | # | Risk | Fix direction |
 |---|------|---------------|
-| **C1** (partial) | **Ghost payment** — user pays after the pending window, booking auto-deletes, webhook finds no match, returns 200 silently. Money gone, no record, no alert. | ⚠️ **Mitigated** — `expiresAt` bumped from 30→60 min to cover slow GHL payments. **Full fix still pending:** audit log of recently-deleted pendings + webhook recovery path. |
+| ~~**C1**~~ | ~~**Ghost payment** — user pays after the pending window, booking auto-deletes, webhook finds no match~~ | ✅ **Fixed** — expiry bump (60 min) + audit log + webhook recovery. See "Ghost-payment recovery" section below. |
 | ~~**C2**~~ | ~~**Double-booking race**~~ | ✅ **Fixed** — unique compound index on `{roomUnit, checkIn, checkOut}` (partial filter: status ∈ pending/confirmed) in `Booking.js`; POST + PUT catch E11000 and return 409. `syncIndexes()` runs on boot to replace the old non-unique index. |
 | ~~**C3**~~ | ~~**Webhook auth bypass**~~ | ✅ **Fixed** — startup guard in `server/server.js` refuses to boot in production if `GHL_WEBHOOK_SECRET` is unset; webhook handler requires the secret unconditionally. |
 | ~~**H1**~~ | ~~**No admin alert on unmatched webhook**~~ | ✅ **Fixed** — Nodemailer + Gmail SMTP sends an email to `ALERT_EMAIL_TO` whenever `payment_status: "paid"` arrives but no booking matches. Redacts `secret` before emailing. Fire-and-forget (webhook still returns 200 even if email fails). |
@@ -326,7 +337,7 @@ An audit on 2026-04-18 surfaced the risks below. The system is functional end-to
 
 ### Recommended Order
 
-**Phase A:** ~~C3~~ ✅ → ~~C2~~ ✅ → ~~C1 partial~~ ⚠️ → ~~H1~~ ✅ — **Phase A complete.** **Phase B:** ~~H2~~ ✅ → ~~H4~~ ✅ → ~~H5~~ ✅ → **H3 ⏸️ deferred** (blocked on GHL admin config). **Phase C polish:** ~~M1~~ ~~M2~~ ~~M3~~ ~~M4~~ ~~M5~~ ~~L1~~ ~~L2~~ ~~L3~~ ✅ (bundled PR). **Remaining:** **C1 full fix** (audit log of recently-deleted pendings + webhook recovery path) — shipped separately.
+**Phase A:** ~~C3~~ ✅ → ~~C2~~ ✅ → ~~C1 partial~~ ⚠️ → ~~H1~~ ✅ — **Phase A complete.** **Phase B:** ~~H2~~ ✅ → ~~H4~~ ✅ → ~~H5~~ ✅ → **H3 ⏸️ deferred** (blocked on GHL admin config). **Phase C polish:** ~~M1~~ ~~M2~~ ~~M3~~ ~~M4~~ ~~M5~~ ~~L1~~ ~~L2~~ ~~L3~~ ✅. **C1 full fix:** ~~audit log + webhook recovery~~ ✅. **All backlog items either shipped or deferred pending external coord (H3).**
 
 ---
 

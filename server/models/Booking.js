@@ -92,13 +92,11 @@ bookingSchema.index(
   }
 );
 
-// TTL index — auto-delete pending bookings after expiresAt
-bookingSchema.index(
-  { expiresAt: 1 },
-  { expireAfterSeconds: 0, partialFilterExpression: { status: 'pending' } }
-);
-
-// Fast lookup for webhook email matching
+// Fast lookup for cleanup-loop and webhook email matching.
+// Pending-booking expiry is handled by the cleanup interval in server.js, not
+// by a MongoDB TTL: the interval first copies each expiring booking into the
+// DeletedPending audit collection so late-arriving webhooks can still recover.
+bookingSchema.index({ status: 1, expiresAt: 1 });
 bookingSchema.index({ email: 1, status: 1 });
 
 export default mongoose.model('Booking', bookingSchema);

@@ -27,7 +27,12 @@ function parseRecipients(raw) {
 
 // Fire-and-forget: never throws into the caller. Webhook must still return 200
 // to GHL even if the alert email fails — we log the failure and move on.
-export async function sendUnmatchedPaymentAlert({ payload }) {
+//
+// `reason` is an optional short label describing why the alert fired — the
+// webhook uses this to tell the admin whether the audit log had a hit, was
+// blocked by a slot conflict, or had no match at all. Without it, the admin
+// has to read server logs to distinguish cases.
+export async function sendUnmatchedPaymentAlert({ payload, reason, auditHit }) {
   const to = parseRecipients(process.env.ALERT_EMAIL_TO);
   const t = getTransporter();
 
@@ -48,11 +53,27 @@ export async function sendUnmatchedPaymentAlert({ payload }) {
     `amount: ${safePayload.amount ?? '(missing)'}`,
   ].join('\n');
 
+  const auditSection = auditHit
+    ? [
+        '',
+        'Audit log match (DeletedPending):',
+        `  originalBookingId: ${auditHit.originalBookingId}`,
+        `  roomUnit: ${auditHit.roomUnit}`,
+        `  checkIn: ${auditHit.checkIn?.toISOString?.() || auditHit.checkIn}`,
+        `  checkOut: ${auditHit.checkOut?.toISOString?.() || auditHit.checkOut}`,
+        `  guestName: ${auditHit.guestName}`,
+        `  amount: ${auditHit.amount}`,
+      ].join('\n')
+    : '';
+
   const body = [
     'A GoHighLevel webhook arrived with payment_status="paid" but no matching pending booking was found in the database.',
     '',
+    reason ? `Reason: ${reason}` : null,
+    '',
     'Payload received:',
     safeLines,
+    auditSection,
     '',
     `Received at: ${new Date().toISOString()}`,
     '',
@@ -66,7 +87,9 @@ export async function sendUnmatchedPaymentAlert({ payload }) {
     '  1. Verify the payment in the GHL dashboard.',
     '  2. If legitimate: create the booking manually and notify the customer.',
     '  3. If suspicious: refund via GHL and consider rotating GHL_WEBHOOK_SECRET.',
-  ].join('\n');
+  ]
+    .filter((line) => line !== null)
+    .join('\n');
 
   try {
     await t.sendMail({
