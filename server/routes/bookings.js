@@ -67,16 +67,43 @@ router.post(
         });
       }
 
-      const bookingId = await generateBookingId();
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 60 minutes
 
-      const booking = new Booking({
-        ...req.body,
-        bookingId,
-        status: 'pending',
-        expiresAt,
-      });
-      const saved = await booking.save();
+      // Retry on bookingId collision — two concurrent POSTs within the same
+      // millisecond can compute the same BK-YYYYMMDD-NNN sequence and race on
+      // the unique index. Regenerate and retry up to 3 times before giving up.
+      // Any other error (including the compound-index E11000 for real double
+      // bookings) bubbles to the outer catch unchanged.
+      const MAX_ATTEMPTS = 3;
+      let saved = null;
+      let lastIdCollision = null;
+
+      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        try {
+          const bookingId = await generateBookingId();
+          const booking = new Booking({
+            ...req.body,
+            bookingId,
+            status: 'pending',
+            expiresAt,
+          });
+          saved = await booking.save();
+          break;
+        } catch (err) {
+          if (err.code === 11000 && err.keyPattern?.bookingId) {
+            lastIdCollision = err;
+            continue;
+          }
+          throw err;
+        }
+      }
+
+      if (!saved) {
+        console.error('generateBookingId retries exhausted:', lastIdCollision?.message);
+        return res.status(503).json({
+          message: 'Could not generate a booking ID. Please try again.',
+        });
+      }
 
       req.io.emit('booking:created', saved);
       res.status(201).json(saved);
