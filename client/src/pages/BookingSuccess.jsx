@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { getBookingStatus } from '../services/api';
@@ -15,8 +15,13 @@ export default function BookingSuccess() {
   const pollCount = useRef(0);
   const intervalRef = useRef(null);
 
-  useEffect(() => {
+  const startPolling = useCallback(() => {
+    clearInterval(intervalRef.current);
+    pollCount.current = 0;
+    setStatus('polling');
+
     async function poll() {
+      pollCount.current += 1;
       try {
         const data = await getBookingStatus(bookingId);
 
@@ -27,27 +32,34 @@ export default function BookingSuccess() {
           return;
         }
 
-        // Still pending — keep polling
-        pollCount.current += 1;
-        if (pollCount.current >= MAX_POLLS) {
-          setStatus('timeout');
-          clearInterval(intervalRef.current);
-        }
+        // Still pending — fall through to MAX_POLLS check below
       } catch (err) {
-        // 404 = expired or not found
+        // 404 is authoritative: booking is gone (expired or never existed).
+        // Terminate immediately so the user sees the real outcome.
         if (err.response?.status === 404) {
           setStatus('not_found');
           clearInterval(intervalRef.current);
+          return;
         }
+        // Any other error (network blip, 5xx) — keep polling. The webhook
+        // may still land; we shouldn't flip to not_found on transient errors.
+        // MAX_POLLS check below still caps total wait time.
+      }
+
+      if (pollCount.current >= MAX_POLLS) {
+        setStatus('timeout');
+        clearInterval(intervalRef.current);
       }
     }
 
-    // Initial check
     poll();
     intervalRef.current = setInterval(poll, POLL_INTERVAL);
-
-    return () => clearInterval(intervalRef.current);
   }, [bookingId]);
+
+  useEffect(() => {
+    startPolling();
+    return () => clearInterval(intervalRef.current);
+  }, [startPolling]);
 
   return (
     <div className="min-h-screen bg-muted/40 flex items-center justify-center p-4">
@@ -114,32 +126,7 @@ export default function BookingSuccess() {
               Booking ID: <span className="font-mono text-foreground">{bookingId}</span>
             </p>
             <div className="flex gap-3 justify-center mt-6">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  pollCount.current = 0;
-                  setStatus('polling');
-                  intervalRef.current = setInterval(async () => {
-                    try {
-                      const data = await getBookingStatus(bookingId);
-                      if (data.status === 'confirmed') {
-                        setStatus('confirmed');
-                        setGuestName(data.guestName || '');
-                        clearInterval(intervalRef.current);
-                      } else {
-                        pollCount.current += 1;
-                        if (pollCount.current >= MAX_POLLS) {
-                          setStatus('timeout');
-                          clearInterval(intervalRef.current);
-                        }
-                      }
-                    } catch {
-                      setStatus('not_found');
-                      clearInterval(intervalRef.current);
-                    }
-                  }, POLL_INTERVAL);
-                }}
-              >
+              <Button variant="outline" onClick={startPolling}>
                 Retry
               </Button>
               <Button asChild>

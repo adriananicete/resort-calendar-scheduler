@@ -309,14 +309,14 @@ An audit on 2026-04-18 surfaced the risks below. The system is functional end-to
 
 ### Medium / Low — Phase C (Opportunistic)
 
-- **M1** GHL field rename silently breaks prefill — document contract; add pre-launch check.
-- **M2** `PaymentReminderModal` UX trap — resolved by H2.
-- **M3** Success page polling conflates 404 with network blip — distinguish error types.
-- **M4** Same-email multiple pendings → fallback may confirm wrong one — resolved once GHL sends `bookingId` consistently.
-- **M5** Render cold-start (30s) — non-issue in practice; documented for completeness.
-- **L1** `splitGuestName` edge cases (double spaces, emoji) — cosmetic.
-- **L2** Schema defaults — `status` default should be `'pending'`; unused `'expired'` enum value.
-- **L3** Phone not normalized before prefill — strip non-digits, normalize to `+63...`.
+- ~~**M1**~~ ✅ GHL field rename silently breaks prefill — `logGhlContract()` in `server.js` prints the expected URL-prefill keys and webhook body keys at boot so a mismatched GHL form config is visible the moment the server starts.
+- ~~**M2**~~ ✅ `PaymentReminderModal` UX trap — resolved by H2 (Cancel button).
+- ~~**M3**~~ ✅ Success page polling conflates 404 with network blip — `BookingSuccess.jsx` now only terminates as `not_found` on HTTP 404. Network errors and 5xx keep polling; `MAX_POLLS` still caps total wait. Retry button now reuses the same `startPolling` callback instead of duplicating logic.
+- ~~**M4**~~ ✅ Same-email multiple pendings → documented as resolved once GHL is configured to include `bookingId` on every webhook. No code change — webhook already prefers `bookingId` over `email`.
+- ~~**M5**~~ ✅ Render cold-start (30s) — non-issue in practice; documented for completeness.
+- ~~**L1**~~ ✅ `splitGuestName` normalizes whitespace runs (`\s+` → single space) before splitting so `"Juan  Dela Cruz"` yields `first_name=Juan, last_name=Dela Cruz`.
+- ~~**L2**~~ ✅ Schema cleaned up — `status` default is now `'pending'` (new bookings are pending until payment), `'expired'` removed from the enum, and the `$ne: 'expired'` dead filters in `conflictCheck.js` and `GET /api/bookings` dropped.
+- ~~**L3**~~ ✅ `normalizePhoneToIntl(raw)` in `BookingForm.jsx` strips non-digits and coerces to `+63...` before GHL prefill. Handles `0917…`, `+63917…`, and `63917…` forms.
 
 ### Critical Files by Risk
 
@@ -326,7 +326,7 @@ An audit on 2026-04-18 surfaced the risks below. The system is functional end-to
 
 ### Recommended Order
 
-**Phase A:** ~~C3~~ ✅ → ~~C2~~ ✅ → ~~C1 partial~~ ⚠️ → ~~H1~~ ✅ — **Phase A complete.** **Phase B:** ~~H2~~ ✅ → ~~H4~~ ✅ → ~~H5~~ ✅ → **H3 ⏸️ deferred** (blocked on GHL admin config — GHL must lock product price server-side before the webhook-side amount check is meaningful). **Phase C:** as surfaced by real usage. **C1 full fix (audit log + recovery)** remains in Phase C.
+**Phase A:** ~~C3~~ ✅ → ~~C2~~ ✅ → ~~C1 partial~~ ⚠️ → ~~H1~~ ✅ — **Phase A complete.** **Phase B:** ~~H2~~ ✅ → ~~H4~~ ✅ → ~~H5~~ ✅ → **H3 ⏸️ deferred** (blocked on GHL admin config). **Phase C polish:** ~~M1~~ ~~M2~~ ~~M3~~ ~~M4~~ ~~M5~~ ~~L1~~ ~~L2~~ ~~L3~~ ✅ (bundled PR). **Remaining:** **C1 full fix** (audit log of recently-deleted pendings + webhook recovery path) — shipped separately.
 
 ---
 

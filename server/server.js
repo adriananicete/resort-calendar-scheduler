@@ -81,6 +81,16 @@ function startPendingCleanup() {
   }, 5 * 60 * 1000);
 }
 
+// GHL integration contract — logged at boot so the operator can cross-check
+// the GoHighLevel order-form configuration. If GHL renames any prefill key
+// or the hidden field, URL prefill breaks silently until someone compares
+// this list against the form.
+function logGhlContract() {
+  console.log('GHL prefill contract (must match GHL order-form field keys):');
+  console.log('  URL params sent : first_name, last_name, email, phone, amount, bookingId');
+  console.log('  Webhook body    : bookingId, email, payment_status, secret');
+}
+
 mongoose
   .connect(process.env.MONGODB_URI)
   .then(async () => {
@@ -89,6 +99,7 @@ mongoose
     // {roomUnit, checkIn, checkOut} index from non-unique to unique.
     await Booking.syncIndexes();
     startPendingCleanup();
+    logGhlContract();
     httpServer.listen(process.env.PORT, () =>
       console.log(`Server running on port ${process.env.PORT}`)
     );
