@@ -4,6 +4,17 @@ import { sendUnmatchedPaymentAlert } from '../utils/sendAdminAlert.js';
 
 const router = Router();
 
+// Strips the shared secret and any unknown fields before logging — the raw
+// req.body contains GHL_WEBHOOK_SECRET on legitimate calls, which must never
+// hit logs.
+function safeLogFields(body) {
+  return {
+    bookingId: body?.bookingId,
+    email: body?.email,
+    payment_status: body?.payment_status,
+  };
+}
+
 // POST /api/webhooks/gohighlevel — payment confirmation from GoHighLevel
 router.post('/gohighlevel', async (req, res) => {
   try {
@@ -25,12 +36,12 @@ router.post('/gohighlevel', async (req, res) => {
 
     if (payment_status !== 'paid') {
       // Return 200 to prevent GHL retries — just log and ignore
-      console.warn('Webhook ignored: status not paid', req.body);
+      console.warn('Webhook ignored: status not paid', safeLogFields(req.body));
       return res.json({ received: true, matched: false });
     }
 
     if (!bookingId && !email) {
-      console.warn('Webhook ignored: no bookingId or email', req.body);
+      console.warn('Webhook ignored: no bookingId or email', safeLogFields(req.body));
       // Fire-and-forget admin alert — paid webhook with no way to identify booking.
       sendUnmatchedPaymentAlert({ payload: req.body });
       return res.json({ received: true, matched: false });
