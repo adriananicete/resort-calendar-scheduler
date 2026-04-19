@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import bookingRoutes from './routes/bookings.js';
 import webhookRoutes from './routes/webhooks.js';
 import Booking from './models/Booking.js';
+import DeletedPending from './models/DeletedPending.js';
 
 dotenv.config();
 
@@ -57,19 +58,55 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => console.log(`Client disconnected: ${socket.id}`));
 });
 
-// Clean up expired pending bookings every 5 minutes
-// (TTL index handles deletion, but this emits socket events so clients update)
+// Clean up expired pending bookings every 60 seconds. This loop (not a
+// MongoDB TTL) is the sole deletion path so every expiring booking gets
+// copied into the DeletedPending audit collection first — that snapshot is
+// what lets a late-arriving GHL "paid" webhook recover a ghost payment.
 function startPendingCleanup() {
   setInterval(async () => {
     try {
       const expired = await Booking.find({
         status: 'pending',
         expiresAt: { $lte: new Date() },
-      }).select('_id bookingId');
+      });
 
       for (const doc of expired) {
-        await Booking.findByIdAndDelete(doc._id);
-        io.emit('booking:deleted', { id: doc._id });
+        // Snapshot first — if this fails, skip the delete so we never end up
+        // with a vanished booking and no audit trail.
+        try {
+          await DeletedPending.create({
+            originalBookingId: doc.bookingId,
+            guestName: doc.guestName,
+            contactNumber: doc.contactNumber,
+            email: doc.email,
+            tourType: doc.tourType,
+            checkIn: doc.checkIn,
+            checkOut: doc.checkOut,
+            roomUnit: doc.roomUnit,
+            adults: doc.adults,
+            children: doc.children,
+            amount: doc.amount,
+            paymentType: doc.paymentType,
+            specialRequest: doc.specialRequest,
+            originalCreatedAt: doc.createdAt,
+          });
+        } catch (auditErr) {
+          console.error(
+            `Audit write failed for ${doc.bookingId}, skipping delete:`,
+            auditErr.message
+          );
+          continue;
+        }
+
+        // Guarded delete — a webhook may have confirmed the booking between
+        // our find() and this delete. If so, leave it alone.
+        const deleted = await Booking.findOneAndDelete({
+          _id: doc._id,
+          status: 'pending',
+        });
+        if (deleted) {
+          io.emit('booking:deleted', { id: doc._id });
+        }
       }
 
       if (expired.length > 0) {
@@ -78,7 +115,7 @@ function startPendingCleanup() {
     } catch (err) {
       console.error('Pending cleanup error:', err.message);
     }
-  }, 5 * 60 * 1000);
+  }, 60 * 1000);
 }
 
 // GHL integration contract — logged at boot so the operator can cross-check
