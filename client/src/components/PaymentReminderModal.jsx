@@ -1,4 +1,5 @@
-import { Hourglass, CreditCard, Clock } from 'lucide-react';
+import { useState } from 'react';
+import { Hourglass, CreditCard, Clock, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -7,11 +8,23 @@ import {
 } from './ui/dialog';
 import { Button } from './ui/button';
 
-export default function PaymentReminderModal({ bookingId, paymentUrl, onClose }) {
+export default function PaymentReminderModal({ bookingId, paymentUrl, onCancel }) {
+  const [cancelling, setCancelling] = useState(false);
+
   if (!paymentUrl) return null;
 
   function handleProceed() {
     window.location.href = paymentUrl;
+  }
+
+  async function handleCancel() {
+    if (cancelling || !onCancel) return;
+    setCancelling(true);
+    try {
+      await onCancel();
+    } finally {
+      setCancelling(false);
+    }
   }
 
   return (
@@ -63,14 +76,25 @@ export default function PaymentReminderModal({ bookingId, paymentUrl, onClose })
           </div>
         </div>
 
-        <div className="px-5 pb-5">
+        <div className="px-5 pb-5 space-y-2">
           <Button
             type="button"
             onClick={handleProceed}
+            disabled={cancelling}
             className="w-full"
           >
             <CreditCard className="w-4 h-4" strokeWidth={2.5} />
             Proceed to payment
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleCancel}
+            disabled={cancelling}
+            className="w-full"
+          >
+            <X className="w-4 h-4" strokeWidth={2.5} />
+            {cancelling ? 'Cancelling...' : 'Cancel booking'}
           </Button>
         </div>
       </DialogContent>
