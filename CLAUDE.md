@@ -305,7 +305,7 @@ An audit on 2026-04-18 surfaced the risks below. The system is functional end-to
 | ~~**H2**~~ | ~~**No cancel button** in `PaymentReminderModal`~~ | ✅ **Fixed** — outline "Cancel booking" button added below "Proceed to payment"; calls `DELETE /api/bookings/:id` (which emits `booking:deleted`), toasts, resets form. Modal receives `_id` (Mongo `_id`) since DELETE route uses `findByIdAndDelete`, not `bookingId`. |
 | **H3** | **Amount URL param is client-spoofable** — user can edit URL before GHL submit. | GHL-side: lock product price (server-configured), not URL-driven. Our-side: webhook verifies amount matches booking. |
 | ~~**H4**~~ | ~~`console.warn(req.body)` leaks the webhook secret~~ | ✅ **Fixed** — `safeLogFields(body)` helper in `server/routes/webhooks.js` returns only `{bookingId, email, payment_status}`. Both `console.warn(..., req.body)` call sites now pass the redacted object. Email alert path (`sendUnmatchedPaymentAlert`) already redacts `secret` server-side. |
-| **H5** | `generateBookingId` race → two concurrent POSTs compute same seq → E11000 → 500 error to second user. | Catch E11000 in POST handler; retry up to 3 times. |
+| ~~**H5**~~ | ~~`generateBookingId` race → two concurrent POSTs compute same seq → E11000 → 500~~ | ✅ **Fixed** — POST `/api/bookings` wraps id-generation + `save()` in a retry loop (max 3). Only E11000 errors where `err.keyPattern.bookingId` is set trigger a retry; the compound-index E11000 (real double booking) bubbles to the outer catch as a 409. Exhausted retries return 503 "try again" instead of 500. |
 
 ### Medium / Low — Phase C (Opportunistic)
 
@@ -323,11 +323,10 @@ An audit on 2026-04-18 surfaced the risks below. The system is functional end-to
 | Risk | File | Lines |
 |------|------|-------|
 | C1 | `server/routes/bookings.js` | 71 (expiresAt) |
-| H5 | `server/utils/generateBookingId.js`, `server/routes/bookings.js` | 7-29, 79-85 |
 
 ### Recommended Order
 
-**Phase A:** ~~C3~~ ✅ → ~~C2~~ ✅ → ~~C1 partial~~ ⚠️ → ~~H1~~ ✅ — **Phase A complete.** **Phase B:** ~~H2~~ ✅ → ~~H4~~ ✅ → H5 → H3 (H3 needs GHL admin coord). **Phase C:** as surfaced by real usage. **C1 full fix (audit log + recovery)** remains in Phase C.
+**Phase A:** ~~C3~~ ✅ → ~~C2~~ ✅ → ~~C1 partial~~ ⚠️ → ~~H1~~ ✅ — **Phase A complete.** **Phase B:** ~~H2~~ ✅ → ~~H4~~ ✅ → ~~H5~~ ✅ → H3 (H3 needs GHL admin coord). **Phase C:** as surfaced by real usage. **C1 full fix (audit log + recovery)** remains in Phase C.
 
 ---
 
