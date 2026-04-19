@@ -67,8 +67,8 @@ const bookingSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'confirmed', 'expired'],
-    default: 'confirmed',
+    enum: ['pending', 'confirmed'],
+    default: 'pending',
   },
   expiresAt: {
     type: Date,
@@ -81,8 +81,9 @@ const bookingSchema = new mongoose.Schema({
 });
 
 // Unique compound index — race-proof defense against double-booking.
-// Partial filter limits uniqueness to active bookings; 'expired' docs (legacy, rare)
-// are exempt so a stale record can't block a legitimate new booking.
+// Partial filter keeps uniqueness scoped to the two valid statuses; any legacy
+// doc with a stale status (pre-enum-cleanup) is exempt and can't block a new
+// booking.
 bookingSchema.index(
   { roomUnit: 1, checkIn: 1, checkOut: 1 },
   {

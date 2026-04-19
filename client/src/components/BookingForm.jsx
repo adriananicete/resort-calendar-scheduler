@@ -35,14 +35,26 @@ import {
 import { cn } from '@/lib/utils';
 
 function splitGuestName(fullName) {
-  const trimmed = (fullName || '').trim();
-  if (!trimmed) return { first_name: '', last_name: '' };
-  const firstSpace = trimmed.indexOf(' ');
-  if (firstSpace === -1) return { first_name: trimmed, last_name: '' };
+  // Collapse internal whitespace runs to a single space so "Juan  Dela Cruz"
+  // still splits cleanly into first="Juan", last="Dela Cruz".
+  const normalized = (fullName || '').trim().replace(/\s+/g, ' ');
+  if (!normalized) return { first_name: '', last_name: '' };
+  const firstSpace = normalized.indexOf(' ');
+  if (firstSpace === -1) return { first_name: normalized, last_name: '' };
   return {
-    first_name: trimmed.slice(0, firstSpace),
-    last_name: trimmed.slice(firstSpace + 1).trim(),
+    first_name: normalized.slice(0, firstSpace),
+    last_name: normalized.slice(firstSpace + 1),
   };
+}
+
+function normalizePhoneToIntl(raw) {
+  // Strip everything that isn't a digit, then coerce to Philippine +63 format.
+  // GHL prefill works more reliably with a canonical intl string.
+  const digits = (raw || '').replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('0')) return `+63${digits.slice(1)}`;
+  if (digits.startsWith('63')) return `+${digits}`;
+  return `+${digits}`;
 }
 
 const EMPTY_FORM = {
@@ -203,7 +215,7 @@ export default function BookingForm({ editingBooking, onEditDone, initialDate, b
             first_name,
             last_name,
             email: form.email,
-            phone: form.contactNumber,
+            phone: normalizePhoneToIntl(form.contactNumber),
             amount: String(form.amount),
             bookingId: saved.bookingId,
           });
