@@ -14,7 +14,7 @@ import {
   getRoomPrice,
   formatPeso,
 } from '../utils/tourTypeHelpers';
-import { createBooking, updateBooking } from '../services/api';
+import { createBooking, updateBooking, deleteBooking } from '../services/api';
 import { useConflictCheck } from '../hooks/useConflictCheck';
 import BookingConfirmModal from './BookingConfirmModal';
 import PaymentReminderModal from './PaymentReminderModal';
@@ -64,7 +64,7 @@ export default function BookingForm({ editingBooking, onEditDone, initialDate, b
   const [checkOut, setCheckOut] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [paymentInfo, setPaymentInfo] = useState(null); // { bookingId, paymentUrl }
+  const [paymentInfo, setPaymentInfo] = useState(null); // { id, bookingId, paymentUrl }
 
   const isEditing = !!editingBooking;
 
@@ -211,7 +211,7 @@ export default function BookingForm({ editingBooking, onEditDone, initialDate, b
 
           // Show payment reminder modal instead of redirecting immediately
           setShowConfirm(false);
-          setPaymentInfo({ bookingId: saved.bookingId, paymentUrl: fullUrl });
+          setPaymentInfo({ id: saved._id, bookingId: saved.bookingId, paymentUrl: fullUrl });
           return; // Don't reset — user still needs to proceed to payment
         }
 
@@ -525,7 +525,17 @@ export default function BookingForm({ editingBooking, onEditDone, initialDate, b
         <PaymentReminderModal
           bookingId={paymentInfo.bookingId}
           paymentUrl={paymentInfo.paymentUrl}
-          onClose={() => setPaymentInfo(null)}
+          onCancel={async () => {
+            try {
+              await deleteBooking(paymentInfo.id);
+              toast.success('Booking cancelled. The date is now available again.');
+              setPaymentInfo(null);
+              resetForm();
+            } catch (err) {
+              const msg = err.response?.data?.message || err.message || 'Failed to cancel booking.';
+              toast.error(msg);
+            }
+          }}
         />
       )}
     </>
