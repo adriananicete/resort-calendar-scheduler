@@ -242,7 +242,7 @@ export default function BookingForm({ editingBooking, onEditDone, initialDate, b
 
   return (
     <>
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden shadow-md">
         <CardHeader className="px-5 py-4 border-b border-border space-y-1">
           <CardTitle className="text-lg flex items-center gap-2.5">
             {isEditing

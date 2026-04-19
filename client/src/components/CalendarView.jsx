@@ -193,7 +193,7 @@ export default function CalendarView({ bookings, onSelectSlot, onNewBooking, for
     : 580;
 
   return (
-    <Card className="flex flex-col overflow-hidden">
+    <Card className="flex flex-col overflow-hidden shadow-md">
       {/* Header with Tour Type Tabs */}
       <div ref={headerRef} className="px-5 py-4 border-b border-border">
         <h2 className="text-foreground font-semibold text-lg flex items-center gap-2.5">

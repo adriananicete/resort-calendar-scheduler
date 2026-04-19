@@ -63,7 +63,7 @@ export default function BookingSuccess() {
 
   return (
     <div className="min-h-screen bg-muted/40 flex items-center justify-center p-4">
-      <Card className="max-w-md w-full p-8 text-center">
+      <Card className="max-w-md w-full p-8 text-center shadow-md">
         {status === 'polling' && (
           <>
             <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />

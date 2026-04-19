@@ -149,7 +149,7 @@ export default function App() {
         {/* Right Panel — Calendar */}
         <div className="w-full lg:flex-1">
           {loading ? (
-            <Card className="flex items-center justify-center" style={{ height: formHeight || 400 }}>
+            <Card className="flex items-center justify-center shadow-md" style={{ height: formHeight || 400 }}>
               <div className="text-center">
                 <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
                 <p className="text-muted-foreground text-sm mt-3">Loading calendar...</p>
